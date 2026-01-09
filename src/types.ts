@@ -107,6 +107,36 @@ export interface MealSuggestion extends BaseEntity {
   sourceIngredientListId: string;
   aiGenerated: boolean;
   isFavorite: boolean;
+  timeAwareGuidance: string | null; // NEW: Gentle guidance for late-night context
+  isFlexible: boolean; // NEW: Indicates ingredients are optional (default: true)
+}
+
+// Food Reflection Types
+export type FoodReflectionType = 'light' | 'normal' | 'indulgent';
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+export interface FoodReflectionAnalysis {
+  encouragement: string; // Encouraging message
+  suggestions: string[]; // Supportive suggestions based on health conditions
+  suitability: string; // Whether the food choice is suitable given health conditions
+  disclaimer: string; // Required disclaimer
+}
+
+export interface FoodReflection extends BaseEntity {
+  date: string; // ISO date (YYYY-MM-DD)
+  mealType: MealType; // breakfast, lunch, dinner, snack
+  reflection: FoodReflectionType;
+  notes: string | null; // Optional user notes
+  aiAnalysis: FoodReflectionAnalysis | null; // AI-generated encouragement and suggestions
+  processingStatus: 'pending' | 'processing' | 'completed' | 'failed';
+  errorMessage: string | null;
+}
+
+// Sugar Reduction Easter Egg Types
+export interface SugarReductionCup extends BaseEntity {
+  smallCups: number; // 0-4
+  largeCups: number; // Accumulated
+  lastPourDate: string | null; // ISO date (YYYY-MM-DD)
 }
 
 // User Preferences (Singleton)

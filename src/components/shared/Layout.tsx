@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, addMonths, subMonths } from 'date-fns';
 import ErrorBoundary from './ErrorBoundary';
 import BottomTabs from './BottomTabs';
 import SettingsDrawer from './SettingsDrawer';
+import Button from './Button';
+import Card from './Card';
 import { useOffline } from '../../hooks/useOffline';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useFoodReflection } from '../../hooks/useFoodReflection';
+import { FoodReflection, MealType } from '../../types';
 import HealthUploadScreen from '../health/HealthUploadScreen';
 import HealthSummaryScreen from '../health/HealthSummaryScreen';
 import LifestyleSuggestionsScreen from '../health/LifestyleSuggestionsScreen';
@@ -12,6 +17,12 @@ import SymptomLogScreen from '../health/SymptomLogScreen';
 import SymptomAnalysisScreen from '../health/SymptomAnalysisScreen';
 import HealthTimelineScreen from '../health/HealthTimelineScreen';
 import HealthCalendarScreen from '../health/HealthCalendarScreen';
+import FoodReflectionScreen from '../nutrition/FoodReflectionScreen';
+import NutritionInputScreen from '../nutrition/NutritionInputScreen';
+import MealSuggestionsScreen from '../nutrition/MealSuggestionsScreen';
+import NutritionCalendarScreen from '../nutrition/NutritionCalendarScreen';
+import NutritionTimelineScreen from '../nutrition/NutritionTimelineScreen';
+import SugarReductionEasterEgg from '../nutrition/SugarReductionEasterEgg';
 import PrivacySettingsScreen from '../privacy/PrivacySettingsScreen';
 import DataViewScreen from '../privacy/DataViewScreen';
 import DataExportScreen from '../privacy/DataExportScreen';
@@ -86,6 +97,12 @@ function Layout() {
             
             {/* Nutrition routes */}
             <Route path="/nutrition" element={<NutritionHomeScreen />} />
+            <Route path="/nutrition/reflection" element={<FoodReflectionScreen />} />
+            <Route path="/nutrition/calendar" element={<NutritionCalendarScreen />} />
+            <Route path="/nutrition/timeline" element={<NutritionTimelineScreen />} />
+            <Route path="/nutrition/input" element={<NutritionInputScreen />} />
+            <Route path="/nutrition/suggestions" element={<MealSuggestionsScreen />} />
+            <Route path="/nutrition/easter-egg" element={<SugarReductionEasterEgg />} />
             
             {/* Emotional routes */}
             <Route path="/emotional" element={<EmotionalHomeScreen />} />
@@ -140,16 +157,188 @@ function HealthHomeScreen() {
 
 function NutritionHomeScreen() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { getReflectionsForRange } = useFoodReflection();
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [reflections, setReflections] = useState<FoodReflection[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load reflections for current month
+  useEffect(() => {
+    const loadReflections = async () => {
+      try {
+        setLoading(true);
+        const monthStart = startOfMonth(currentMonth);
+        const monthEnd = endOfMonth(currentMonth);
+        const monthReflections = await getReflectionsForRange(
+          format(monthStart, 'yyyy-MM-dd'),
+          format(monthEnd, 'yyyy-MM-dd')
+        );
+        setReflections(monthReflections);
+      } catch (err) {
+        console.error('Failed to load reflections:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadReflections();
+  }, [currentMonth, getReflectionsForRange]);
+
+  // Get reflections for a specific date
+  const getReflectionsForDate = (date: Date): FoodReflection[] => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return reflections.filter(r => r.date === dateStr);
+  };
+
+  const handlePreviousMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
+  const handleDateClick = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dateReflections = getReflectionsForDate(date);
+    if (dateReflections.length > 0) {
+      // Navigate to timeline view for this date
+      navigate(`/nutrition/timeline?date=${dateStr}`);
+    }
+    // If no data, do nothing (just show empty)
+  };
+
+  // Calendar setup
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const firstDayOfWeek = getDay(monthStart);
+  const emptyDays = Array(firstDayOfWeek).fill(null);
+
+  // Meal type icons
+  const mealIcons: Record<MealType, string> = {
+    breakfast: '🌅',
+    lunch: '🍽️',
+    dinner: '🌙',
+    snack: '🌃',
+  };
+
+  const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
   
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-heading text-clay-text mb-6">{t('home.nutritionCompanion')}</h1>
-      <p className="text-clay-textDim font-body text-lg mb-6">
-        {t('home.subtitle')}
-      </p>
-      <div className="p-8 text-center text-clay-textDim clay-card bg-clay-mint">
-        <p className="text-5xl mb-3">🍓</p>
-        <p className="font-body text-lg">{t('app.comingSoon')}</p>
+    <div className="p-6 pb-20">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-heading text-clay-text">
+          {t('home.nutritionCompanion')}
+        </h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePreviousMonth}
+            className="p-2 text-clay-text hover:text-clay-primary rounded-lg hover:bg-clay-mint transition-colors touch-target"
+            aria-label={t('common.previous')}
+          >
+            <span className="text-xl">◀</span>
+          </button>
+          <span className="text-sm font-medium text-clay-text min-w-[120px] text-center font-body">
+            {format(currentMonth, 'yyyy年MM月')}
+          </span>
+          <button
+            onClick={handleNextMonth}
+            className="p-2 text-clay-text hover:text-clay-primary rounded-lg hover:bg-clay-mint transition-colors touch-target"
+            aria-label={t('common.next')}
+          >
+            <span className="text-xl">▶</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Calendar */}
+      <Card className="mb-6">
+        {loading ? (
+          <div className="p-8 text-center">
+            <p className="text-clay-textDim font-body">{t('common.loading')}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-7 gap-1">
+            {/* Week day headers */}
+            {weekDays.map((day) => (
+              <div key={day} className="text-center text-xs font-semibold text-clay-textDim py-2 font-body">
+                {day}
+              </div>
+            ))}
+
+            {/* Empty cells for days before month starts */}
+            {emptyDays.map((_, index) => (
+              <div key={`empty-${index}`} className="aspect-square" />
+            ))}
+
+            {/* Calendar days */}
+            {calendarDays.map((day) => {
+              const dateReflections = getReflectionsForDate(day);
+              const hasReflections = dateReflections.length > 0;
+              const isToday = isSameDay(day, new Date());
+
+              // Get unique meal types and sort by meal order
+              // Filter out undefined/null mealTypes and ensure valid values
+              const uniqueMealTypes = Array.from(
+                new Set(
+                  dateReflections
+                    .map(r => r.mealType || 'lunch') // Default to 'lunch' if missing
+                    .filter((mt): mt is MealType => mealOrder.includes(mt as MealType))
+                )
+              ).sort((a, b) => mealOrder.indexOf(a) - mealOrder.indexOf(b));
+
+              return (
+                <button
+                  key={day.toISOString()}
+                  onClick={() => handleDateClick(day)}
+                  className={`
+                    aspect-square p-1 rounded-lg border-2 transition-colors
+                    ${isToday 
+                      ? 'border-clay-primary bg-clay-mint' 
+                      : hasReflections 
+                      ? 'border-clay-lavender bg-clay-surface hover:bg-clay-mint' 
+                      : 'border-gray-200 hover:border-gray-300'}
+                    ${hasReflections ? 'cursor-pointer' : 'cursor-default'}
+                  `}
+                >
+                  <div className={`text-xs font-medium font-body ${
+                    isToday ? 'text-clay-primary' : 'text-clay-text'
+                  }`}>
+                    {format(day, 'd')}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* Action buttons */}
+      <div className="grid grid-cols-1 gap-4">
+        <Button
+          variant="primary"
+          fullWidth
+          onClick={() => navigate('/nutrition/reflection')}
+          className="min-h-[60px]"
+        >
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-2xl">📝</span>
+            <span>{t('nutrition.record.title')}</span>
+          </div>
+        </Button>
+        <Button
+          variant="primary"
+          fullWidth
+          onClick={() => navigate('/nutrition/input')}
+          className="min-h-[60px]"
+        >
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-2xl">🍎</span>
+            <span>{t('nutrition.input.title')}</span>
+          </div>
+        </Button>
       </div>
     </div>
   );

@@ -17,6 +17,8 @@ export const routes = {
     input: '/nutrition/input',
     suggestions: '/nutrition/suggestions',
     detail: '/nutrition/detail',
+    reflection: '/nutrition/reflection',
+    easterEgg: '/nutrition/easter-egg',
   },
   emotional: {
     base: '/emotional',

@@ -7,6 +7,8 @@ import {
   IngredientList,
   MealSuggestion,
   UserPreferences,
+  FoodReflection,
+  SugarReductionCup,
 } from '../types';
 import {
   getAllEntities,
@@ -26,6 +28,8 @@ export interface ExportData {
   journalEntries: JournalEntry[];
   ingredientLists: IngredientList[];
   mealSuggestions: MealSuggestion[];
+  foodReflections: FoodReflection[];
+  sugarReductionCups: SugarReductionCup[];
   userPreferences: UserPreferences | null;
   exportDate: string;
   exportVersion: string;
@@ -43,6 +47,8 @@ export async function exportAsJSON(): Promise<string> {
     journalEntries: await getAllEntities<JournalEntry>('journalEntries'),
     ingredientLists: await getAllEntities<IngredientList>('ingredientLists'),
     mealSuggestions: await getAllEntities<MealSuggestion>('mealSuggestions'),
+    foodReflections: await getAllEntities<FoodReflection>('foodReflections'),
+    sugarReductionCups: await getAllEntities<SugarReductionCup>('sugarReductionCups'),
     userPreferences: await getEntity<UserPreferences>('userPreferences', 'singleton'),
     exportDate: new Date().toISOString(),
     exportVersion: '1.0',
@@ -93,6 +99,20 @@ export async function exportAsCSV(): Promise<string> {
   journalEntries.forEach((entry) => {
     rows.push(
       `JournalEntry,${entry.id},${entry.createdAt},${entry.updatedAt},"${escapeCSV(JSON.stringify(entry))}"`
+    );
+  });
+
+  const foodReflections = await getAllEntities<FoodReflection>('foodReflections');
+  foodReflections.forEach((reflection) => {
+    rows.push(
+      `FoodReflection,${reflection.id},${reflection.createdAt},${reflection.updatedAt},"${escapeCSV(JSON.stringify(reflection))}"`
+    );
+  });
+
+  const sugarReductionCups = await getAllEntities<SugarReductionCup>('sugarReductionCups');
+  sugarReductionCups.forEach((cup) => {
+    rows.push(
+      `SugarReductionCup,${cup.id},${cup.createdAt},${cup.updatedAt},"${escapeCSV(JSON.stringify(cup))}"`
     );
   });
 

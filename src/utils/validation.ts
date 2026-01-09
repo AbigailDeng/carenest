@@ -9,6 +9,8 @@ import {
   MealSuggestion,
   UserPreferences,
   MoodValue,
+  FoodReflection,
+  SugarReductionCup,
 } from '../types';
 
 /**
@@ -267,6 +269,63 @@ export function validateUserPreferences(
     preferences.dataSharingConsent === null
   ) {
     errors.push('Data sharing consent must be explicitly set');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
+ * Validate food reflection
+ */
+export function validateFoodReflection(
+  reflection: Partial<FoodReflection>
+): ValidationResult {
+  const errors: string[] = [];
+
+  if (reflection.date) {
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(reflection.date)) {
+      errors.push('Date must be in YYYY-MM-DD format');
+    }
+  }
+
+  if (reflection.reflection) {
+    const validReflections: FoodReflection['reflection'][] = ['light', 'normal', 'indulgent'];
+    if (!validReflections.includes(reflection.reflection)) {
+      errors.push('Reflection must be light, normal, or indulgent');
+    }
+  }
+
+  if (reflection.notes && reflection.notes.length > 500) {
+    errors.push('Notes must be 500 characters or less');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
+ * Validate sugar reduction cup
+ */
+export function validateSugarReductionCup(
+  cup: Partial<SugarReductionCup>
+): ValidationResult {
+  const errors: string[] = [];
+
+  if (cup.smallCups !== undefined) {
+    if (cup.smallCups < 0 || cup.smallCups > 4) {
+      errors.push('Small cups must be between 0 and 4');
+    }
+  }
+
+  if (cup.largeCups !== undefined && cup.largeCups < 0) {
+    errors.push('Large cups must be non-negative');
   }
 
   return {
