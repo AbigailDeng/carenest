@@ -31,7 +31,22 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Wellmate Constitution Compliance Checklist:**
+
+- [ ] **Principle 1 (Non-Diagnostic)**: Feature does NOT provide medical diagnoses, prescriptions, or treatment recommendations. All suggestions are clearly labeled as lifestyle/dietary guidance only.
+- [ ] **Principle 2 (Empathetic Tone)**: All user-facing text maintains supportive, empathetic, non-judgmental tone. Error messages are encouraging.
+- [ ] **Principle 3 (Privacy-First)**: Health data stored locally (IndexedDB). No sensitive data transmitted without explicit user consent. Clear data deletion options.
+- [ ] **Principle 4 (Low Cognitive Burden)**: UI is simple, intuitive, minimal steps. Navigation ≤3 levels deep. Core actions completable in <30 seconds.
+- [ ] **Principle 5 (Mobile-First)**: Touch-optimized (44x44px minimum). PWA with offline support. WCAG 2.1 AA compliance.
+- [ ] **Principle 6 (Offline Support)**: Core features work offline. AI features degrade gracefully with clear messaging.
+- [ ] **Principle 7 (Transparent AI)**: AI usage clearly indicated. Users understand why AI made suggestions. AI responses distinguishable from factual data.
+- [ ] **Principle 8 (Data Ownership)**: Users can export data (JSON/CSV). Deletion is permanent and verifiable. Clear ownership statements.
+
+**Architecture Compliance:**
+- [ ] Uses React + TypeScript
+- [ ] IndexedDB for local persistence (via `db.ts` and `services/storage/`)
+- [ ] External APIs isolated in `services/` directory
+- [ ] Follows established folder structure (`src/components/`, `src/hooks/`, `src/services/`, etc.)
 
 ## Project Structure
 

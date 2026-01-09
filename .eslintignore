@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+dist/
+build/
+coverage/
+
+# Build outputs
+*.min.js
+*.bundle.js
+
+# Config files
+*.config.js
+vite.config.ts
+
+# Generated files
+public/
+

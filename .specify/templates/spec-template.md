@@ -113,3 +113,50 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+
+## Constitution Compliance *(mandatory for Wellmate)*
+
+<!--
+  ACTION REQUIRED: Verify this feature complies with Wellmate constitution principles.
+  Reference .specify/memory/constitution.md for full details.
+-->
+
+### Principle 1: Non-Diagnostic, Non-Prescriptive
+- [ ] Feature does NOT provide medical diagnoses or prescriptions
+- [ ] All health-related suggestions include appropriate disclaimers
+- [ ] Language avoids implying medical authority
+
+### Principle 2: Supportive, Empathetic Tone
+- [ ] All user-facing text maintains supportive, non-judgmental tone
+- [ ] Error messages are encouraging and helpful
+- [ ] AI responses acknowledge user feelings appropriately
+
+### Principle 3: Privacy-First Architecture
+- [ ] Sensitive data stored locally (IndexedDB) unless explicit user consent
+- [ ] Data transmission uses encryption and requires opt-in
+- [ ] Users can view, export, and delete their data
+
+### Principle 4: Low Cognitive Burden
+- [ ] Interface is simple and intuitive
+- [ ] Core actions completable in <30 seconds
+- [ ] Uses plain language, avoids jargon
+
+### Principle 5: Mobile-First, Touch-Optimized
+- [ ] Touch targets minimum 44x44px
+- [ ] Works as PWA with offline capabilities
+- [ ] Meets WCAG 2.1 AA accessibility standards
+
+### Principle 6: Graceful Degradation & Offline Support
+- [ ] Core features work without network connectivity
+- [ ] AI features degrade gracefully when offline
+- [ ] Clear messaging about connectivity requirements
+
+### Principle 7: Transparent AI Interactions
+- [ ] AI usage clearly indicated to users
+- [ ] Context provided about AI suggestions
+- [ ] AI responses distinguishable from factual data
+
+### Principle 8: Data Ownership & Portability
+- [ ] Users can export data in standard format
+- [ ] Data deletion is permanent and verifiable
+- [ ] Users retain full data ownership
