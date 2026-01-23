@@ -46,3 +46,4 @@ await Tesseract.recognize(imageUrl, 'chi_sim+eng', {...});
 - 首次使用时，Tesseract.js 会下载语言数据文件（约几MB）
 - 建议使用清晰、高对比度的图片以获得最佳识别效果
 
+

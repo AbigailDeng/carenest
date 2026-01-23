@@ -16,7 +16,7 @@ This guide provides a quick reference for implementing the enhanced Nutrition mo
 
 ```
 src/components/nutrition/
-├── NutritionInputScreen.tsx      # Enhanced ingredient input
+├── NutritionInputScreen.tsx      # Enhanced ingredient input (single textarea, free-form text)
 ├── MealSuggestionsScreen.tsx      # Time-aware meal suggestions
 ├── MealDetailScreen.tsx           # Meal detail view
 ├── FoodReflectionScreen.tsx       # NEW: Daily food reflection
@@ -276,7 +276,74 @@ export default function FoodReflectionScreen() {
 
 ---
 
-### Step 7: Enhanced Meal Suggestions Screen
+### Step 7: Enhanced Ingredient Input Screen
+
+**File**: `src/components/nutrition/NutritionInputScreen.tsx`
+
+Update to use single textarea for free-form ingredient input:
+
+```typescript
+export default function NutritionInputScreen() {
+  const [ingredientsText, setIngredientsText] = useState('');
+  const [energyLevel, setEnergyLevel] = useState<'low' | 'medium' | 'high' | null>(null);
+  const { t } = useTranslation();
+  
+  const handleGenerateSuggestions = () => {
+    if (!ingredientsText.trim()) {
+      // Show error: at least some text needed
+      return;
+    }
+    
+    navigate('/nutrition/suggestions', {
+      state: {
+        ingredients: ingredientsText.trim(), // Pass as string, not array
+        energyLevel,
+      },
+    });
+  };
+  
+  return (
+    <div className="p-6">
+      <h1>{t('nutrition.input.title')}</h1>
+      <p>{t('nutrition.input.description')}</p>
+      
+      <Card className="mb-6">
+        <label>{t('nutrition.input.ingredientsLabel')}</label>
+        <textarea
+          value={ingredientsText}
+          onChange={(e) => setIngredientsText(e.target.value)}
+          placeholder={t('nutrition.input.ingredientPlaceholder')}
+          className="w-full p-4 rounded-[20px] border-2 border-clay-lavender min-h-[120px]"
+        />
+        <p className="text-xs text-clay-textDim mt-3 italic">
+          {t('nutrition.input.flexibilityNote')}
+        </p>
+      </Card>
+      
+      {/* Energy level selector */}
+      {/* ... existing code ... */}
+      
+      <Button
+        onClick={handleGenerateSuggestions}
+        disabled={!ingredientsText.trim()}
+      >
+        {t('nutrition.input.generateSuggestions')}
+      </Button>
+    </div>
+  );
+}
+```
+
+**Design Notes**:
+- Single textarea (no "Add" button, no ingredient list)
+- Users type all ingredients as free-form text
+- LLM will parse and identify individual ingredients
+- Minimum height 120px for comfortable typing
+- Maintain flexibility messaging
+
+---
+
+### Step 8: Enhanced Meal Suggestions Screen
 
 **File**: `src/components/nutrition/MealSuggestionsScreen.tsx`
 
@@ -297,7 +364,7 @@ export default function MealSuggestionsScreen() {
   
   const generateSuggestions = async () => {
     const results = await generateMealSuggestions(
-      { ingredients: [...] },
+      { ingredients: 'tomato, pasta, cheese' }, // Free-form text, LLM parses
       { timeAware: true }
     );
     setSuggestions(results);
@@ -331,7 +398,7 @@ export default function MealSuggestionsScreen() {
 
 ---
 
-### Step 8: Sugar Reduction Easter Egg
+### Step 9: Sugar Reduction Easter Egg
 
 **File**: `src/components/nutrition/SugarReductionEasterEgg.tsx`
 
@@ -387,7 +454,7 @@ export default function SugarReductionEasterEgg() {
 
 ---
 
-### Step 9: Navigation Updates
+### Step 10: Navigation Updates
 
 **File**: `src/components/shared/Layout.tsx`
 
@@ -432,7 +499,7 @@ nutrition: {
 
 ---
 
-### Step 10: Translation Keys
+### Step 11: Translation Keys
 
 **Files**: `src/i18n/locales/en.ts`, `src/i18n/locales/zh.ts`
 
@@ -514,4 +581,5 @@ nutrition: {
 ## End of Quickstart
 
 This guide provides the foundation for implementing the enhanced Nutrition module. Follow the steps in order, and refer to the detailed documentation in other files as needed.
+
 

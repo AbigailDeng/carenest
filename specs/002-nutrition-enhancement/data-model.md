@@ -118,6 +118,8 @@ interface MealSuggestion {
   // ... existing fields ...
   timeAwareGuidance: string | null;  // NEW: Gentle guidance for late-night context
   isFlexible: boolean;                // NEW: Indicates ingredients are optional
+  detailedPreparationMethod: string | null;  // NEW: Step-by-step numbered list for detail view
+  imageUrl: string | null;            // NEW: LLM-generated image URL (generated on-demand when detail view opens)
 }
 ```
 
@@ -448,4 +450,5 @@ export async function migrateToVersion2(db: IDBPDatabase<WellmateDB>) {
 ## End of Data Model
 
 This data model supports the enhanced Nutrition module with daily food reflection, time-aware meal suggestions, and the hidden sugar reduction easter egg feature.
+
 

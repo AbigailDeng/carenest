@@ -180,3 +180,4 @@ interface StorageError {
 - All operations MUST work offline (Principle 6)
 - Data MUST be encrypted at rest for sensitive fields (medical records)
 
+

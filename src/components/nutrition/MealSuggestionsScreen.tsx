@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useOffline } from '../../hooks/useOffline';
-import { generateMealSuggestions, MealSuggestionInput, MealSuggestionOptions } from '../../services/llmService';
+import { generateMealSuggestions, generateMealDetail, MealSuggestionInput, MealSuggestionOptions } from '../../services/llmService';
 import { MealSuggestion } from '../../types';
 import Card from '../shared/Card';
 import Button from '../shared/Button';
 import AIIndicator from '../shared/AIIndicator';
 import Disclaimer from '../shared/Disclaimer';
+import MealDetailScreen from './MealDetailScreen';
 
 export default function MealSuggestionsScreen() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export default function MealSuggestionsScreen() {
   const isOffline = useOffline();
   
   // Get ingredients from location state (passed from input screen)
-  const ingredients = (location.state as any)?.ingredients || [];
+  const ingredients = (location.state as any)?.ingredients || ''; // Now a string, not array
   const healthConditions = (location.state as any)?.healthConditions || [];
   const energyLevel = (location.state as any)?.energyLevel || null;
   
@@ -24,6 +25,13 @@ export default function MealSuggestionsScreen() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeAware, setTimeAware] = useState(false);
+  
+  // Detail view state
+  const [selectedMeal, setSelectedMeal] = useState<MealSuggestion | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailedPreparationMethod, setDetailedPreparationMethod] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   
   // Detect late night (after 9 PM)
   useEffect(() => {
@@ -35,9 +43,10 @@ export default function MealSuggestionsScreen() {
   
   // Generate suggestions on mount if ingredients are available
   useEffect(() => {
-    if (ingredients.length > 0 && !isOffline) {
+    const trimmedIngredients = typeof ingredients === 'string' ? ingredients.trim() : '';
+    if (trimmedIngredients.length > 0 && !isOffline) {
       handleGenerateSuggestions();
-    } else if (ingredients.length === 0) {
+    } else if (trimmedIngredients.length === 0) {
       setError(t('nutrition.suggestions.noIngredients'));
     } else if (isOffline) {
       setError(t('nutrition.suggestions.offline'));
@@ -45,7 +54,8 @@ export default function MealSuggestionsScreen() {
   }, []);
   
   const handleGenerateSuggestions = async () => {
-    if (ingredients.length === 0) {
+    const trimmedIngredients = typeof ingredients === 'string' ? ingredients.trim() : '';
+    if (trimmedIngredients.length === 0) {
       setError(t('nutrition.suggestions.noIngredients'));
       return;
     }
@@ -62,7 +72,7 @@ export default function MealSuggestionsScreen() {
       setSuggestions([]);
       
       const input: MealSuggestionInput = {
-        ingredients,
+        ingredients: typeof ingredients === 'string' ? ingredients.trim() : '',
         healthConditions: healthConditions.length > 0 ? healthConditions : undefined,
         energyLevel: energyLevel || undefined,
       };
@@ -101,6 +111,44 @@ export default function MealSuggestionsScreen() {
     }
   };
   
+  // Handle meal card click - open detail view
+  const handleMealClick = async (meal: MealSuggestion) => {
+    setSelectedMeal(meal);
+    setDetailOpen(true);
+    setLoadingDetail(true);
+    setDetailedPreparationMethod(null);
+    setImageUrl(null);
+    
+    try {
+      // Generate detailed preparation method and image on-demand
+      const detail = await generateMealDetail({
+        mealName: meal.mealName,
+        description: meal.description,
+        ingredients: meal.ingredients,
+        preparationNotes: meal.preparationNotes,
+      });
+      
+      setDetailedPreparationMethod(detail.detailedPreparationMethod);
+      setImageUrl(detail.imageUrl);
+    } catch (err: any) {
+      console.error('Failed to generate meal detail:', err);
+      // Continue with basic info even if detail generation fails
+      setDetailedPreparationMethod(null);
+      setImageUrl(null);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+  
+  // Close detail view
+  const handleCloseDetail = () => {
+    setDetailOpen(false);
+    setSelectedMeal(null);
+    setDetailedPreparationMethod(null);
+    setImageUrl(null);
+    setLoadingDetail(false);
+  };
+  
   return (
     <div className="p-6 min-h-screen bg-clay-bg pb-20">
       <h1 className="text-2xl font-heading text-clay-text mb-6">
@@ -125,13 +173,13 @@ export default function MealSuggestionsScreen() {
       )}
       
       {/* Ingredients used */}
-      {ingredients.length > 0 && (
+      {typeof ingredients === 'string' && ingredients.trim().length > 0 && (
         <Card className="mb-6">
           <p className="text-sm text-clay-textDim font-body mb-2">
             {t('nutrition.suggestions.ingredientsUsed')}
           </p>
           <p className="text-clay-text font-body">
-            {ingredients.join(', ')}
+            {ingredients.trim()}
           </p>
           {timeAware && (
             <p className="text-xs text-clay-textDim mt-2 font-body italic">
@@ -169,7 +217,11 @@ export default function MealSuggestionsScreen() {
       {suggestions.length > 0 && (
         <div className="space-y-4 mb-6">
           {suggestions.map((suggestion) => (
-            <Card key={suggestion.id} className="border-clay-lavender">
+            <Card 
+              key={suggestion.id} 
+              className="border-clay-lavender cursor-pointer transition-all hover:shadow-clay-extrude active:opacity-80"
+              onClick={() => handleMealClick(suggestion)}
+            >
               <h3 className="text-lg font-heading text-clay-text mb-2">
                 {suggestion.mealName}
               </h3>
@@ -242,7 +294,7 @@ export default function MealSuggestionsScreen() {
         >
           {t('common.back')}
         </Button>
-        {ingredients.length > 0 && !isOffline && (
+        {typeof ingredients === 'string' && ingredients.trim().length > 0 && !isOffline && (
           <Button
             variant="primary"
             fullWidth
@@ -253,6 +305,16 @@ export default function MealSuggestionsScreen() {
           </Button>
         )}
       </div>
+      
+      {/* Meal Detail Screen */}
+      <MealDetailScreen
+        meal={selectedMeal}
+        isOpen={detailOpen}
+        onClose={handleCloseDetail}
+        detailedPreparationMethod={detailedPreparationMethod}
+        imageUrl={imageUrl}
+        loading={loadingDetail}
+      />
     </div>
   );
 }

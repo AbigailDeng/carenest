@@ -464,3 +464,4 @@ Users want to:
 - Users may use the app daily or sporadically, so features must work regardless of usage frequency
 - Emotional support features are complementary to, not replacement for, professional mental health care (assumed user understanding)
 
+

@@ -25,7 +25,7 @@ async function generateMealSuggestions(
 
 ```typescript
 interface MealSuggestionInput {
-  ingredients: string[];                    // Available ingredients (optional suggestions)
+  ingredients: string;                      // Free-form text input of available ingredients (optional suggestions)
   healthConditions?: string[];              // Optional: Logged health conditions
   energyLevel?: 'low' | 'medium' | 'high';  // Optional: Current energy level
   dietaryPreferences?: string[];           // Optional: Preferences (vegetarian, vegan, etc.)
@@ -55,6 +55,8 @@ interface MealSuggestion {
   isFavorite: boolean;
   timeAwareGuidance: string | null;         // NEW: Gentle guidance if late night
   isFlexible: boolean;                      // NEW: Ingredients are optional (default: true)
+  detailedPreparationMethod: string | null; // NEW: Step-by-step numbered list for detail view
+  imageUrl: string | null;                  // NEW: LLM-generated image URL (on-demand)
   createdAt: string;
 }
 ```
@@ -88,20 +90,20 @@ interface MealSuggestion {
 ```typescript
 // Standard meal suggestions
 const suggestions = await generateMealSuggestions({
-  ingredients: ['tomato', 'pasta', 'cheese'],
+  ingredients: 'tomato, pasta, cheese',
   energyLevel: 'medium',
 });
 
 // Time-aware suggestions (late night)
 const lateNightSuggestions = await generateMealSuggestions({
-  ingredients: ['bread', 'butter'],
+  ingredients: 'bread, butter',
 }, {
   timeAware: true,  // Will detect late night and provide gentle guidance
 });
 
 // Flexible suggestions (explicit)
 const flexibleSuggestions = await generateMealSuggestions({
-  ingredients: ['chicken', 'rice'],
+  ingredients: 'chicken rice',
 }, {
   flexible: true,  // Ingredients are optional
 });
@@ -122,14 +124,17 @@ const flexibleSuggestions = await generateMealSuggestions({
 ```
 You are a supportive nutrition companion helping users find simple meal ideas.
 
-Available Ingredients: [ingredients]
+Available Ingredients (free-form text): [ingredients]
+[Note: Parse and identify individual ingredients from the text above. Ingredients are suggestions, not requirements.]
+
 [If healthConditions]: Health Considerations: [healthConditions]
 [If energyLevel]: Energy Level: [energyLevel]
 [If dietaryPreferences]: Dietary Preferences: [dietaryPreferences]
 
 IMPORTANT GUIDELINES:
+- Parse the ingredient text to identify individual ingredients
 - Generate simple, accessible meal suggestions
-- Ingredients are suggestions - meals can use some or all ingredients
+- Ingredients are suggestions - meals can use some or all identified ingredients
 - Provide gentle, supportive language
 - Include disclaimers that suggestions are dietary guidance, not medical advice
 - Do NOT prescribe specific diets or medical dietary advice
@@ -154,7 +159,9 @@ You are a supportive nutrition companion helping users find gentle meal ideas.
 
 [Current time is late night - after 9 PM]
 
-Available Ingredients: [ingredients]
+Available Ingredients (free-form text): [ingredients]
+[Note: Parse and identify individual ingredients from the text above. Ingredients are suggestions, not requirements.]
+
 [If healthConditions]: Health Considerations: [healthConditions]
 [If energyLevel]: Energy Level: [energyLevel]
 
@@ -264,7 +271,7 @@ function buildMealSuggestionPrompt(
   }
   
   // Fill in input data
-  prompt = prompt.replace('[ingredients]', input.ingredients.join(', '));
+  prompt = prompt.replace('[ingredients]', input.ingredients); // Direct text replacement, no parsing needed
   // ... other replacements
   
   return prompt;
@@ -282,7 +289,48 @@ function buildMealSuggestionPrompt(
 
 ---
 
+## New Method: `generateMealDetail`
+
+### Signature
+
+```typescript
+async function generateMealDetail(
+  mealSuggestion: MealSuggestion
+): Promise<{
+  detailedPreparationMethod: string;  // Step-by-step numbered list
+  imageUrl: string;                   // LLM-generated image URL
+}>
+```
+
+### Description
+
+Generate detailed preparation method (step-by-step numbered list) and image for a meal suggestion. Called on-demand when user opens detail view.
+
+### Input
+
+- `mealSuggestion`: Existing MealSuggestion object with basic information
+
+### Output
+
+- `detailedPreparationMethod`: Step-by-step numbered list (e.g., "1. Step one\n2. Step two\n3. Step three")
+- `imageUrl`: URL to LLM-generated image of the meal
+
+### Behavior
+
+1. Generate detailed step-by-step preparation method based on meal name, ingredients, and basic preparation notes
+2. Generate image using image generation API (e.g., Gemini 2.0 Flash) based on meal name and description
+3. Return both detailed method and image URL
+
+### Error Handling
+
+- **Image Generation Failure**: Return detailed method with `imageUrl: null`, show placeholder in UI
+- **Network Error**: Throw `ApiError` with `retryable: true`
+- **Invalid Input**: Throw `ApiError` with `retryable: false`
+
+---
+
 ## End of Contract
 
-This contract defines the enhanced LLM service methods for time-aware meal suggestions and flexible ingredient handling.
+This contract defines the enhanced LLM service methods for time-aware meal suggestions, flexible ingredient handling, and meal detail generation with images.
+
 

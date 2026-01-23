@@ -210,3 +210,4 @@
 3. Create quickstart guide (`quickstart.md`) for implementation
 4. Generate implementation tasks (`tasks.md` via `/speckit.tasks`)
 
+

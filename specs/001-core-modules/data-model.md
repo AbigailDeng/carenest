@@ -528,3 +528,4 @@ JournalEntry (many) [standalone]
 4. Create TypeScript interfaces matching schemas
 5. Build custom hooks for each store (`useMedicalRecords`, `useSymptomEntries`, etc.)
 
+

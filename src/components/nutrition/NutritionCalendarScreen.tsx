@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, getDay, addMonths, subMonths } from 'date-fns';
 import { useFoodReflection } from '../../hooks/useFoodReflection';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -9,6 +9,7 @@ import Button from '../shared/Button';
 
 export default function NutritionCalendarScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const { getReflectionsForRange } = useFoodReflection();
@@ -17,25 +18,43 @@ export default function NutritionCalendarScreen() {
   const [loading, setLoading] = useState(true);
 
   // Load reflections for current month
-  useMemo(() => {
-    const loadReflections = async () => {
-      try {
-        setLoading(true);
-        const monthStart = startOfMonth(currentMonth);
-        const monthEnd = endOfMonth(currentMonth);
-        const monthReflections = await getReflectionsForRange(
-          format(monthStart, 'yyyy-MM-dd'),
-          format(monthEnd, 'yyyy-MM-dd')
-        );
-        setReflections(monthReflections);
-      } catch (err) {
-        console.error('Failed to load reflections:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadReflections = async () => {
+    try {
+      setLoading(true);
+      const monthStart = startOfMonth(currentMonth);
+      const monthEnd = endOfMonth(currentMonth);
+      const monthReflections = await getReflectionsForRange(
+        format(monthStart, 'yyyy-MM-dd'),
+        format(monthEnd, 'yyyy-MM-dd')
+      );
+      setReflections(monthReflections);
+    } catch (err) {
+      console.error('Failed to load reflections:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load reflections when month changes
+  useEffect(() => {
     loadReflections();
   }, [currentMonth, getReflectionsForRange]);
+
+  // Reload when page becomes visible (user returns from another screen)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadReflections();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentMonth, getReflectionsForRange]);
+
+  // Reload when location changes (user navigates back to this screen)
+  useEffect(() => {
+    loadReflections();
+  }, [location.pathname]);
 
   // Get reflections for a specific date
   const getReflectionsForDate = (date: Date): FoodReflection[] => {
@@ -77,12 +96,12 @@ export default function NutritionCalendarScreen() {
   const firstDayOfWeek = getDay(monthStart);
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
-  // Meal type icons
-  const mealIcons: Record<MealType, string> = {
-    breakfast: '🌅',
-    lunch: '🍽️',
-    dinner: '🌙',
-    snack: '🌃',
+  // Meal type colors for dots
+  const mealColors: Record<MealType, string> = {
+    breakfast: 'bg-orange-400', // 早餐 - 橙色
+    lunch: 'bg-blue-400',       // 午餐 - 蓝色
+    dinner: 'bg-purple-400',    // 晚餐 - 紫色
+    snack: 'bg-gray-400',       // 夜宵 - 灰色
   };
 
   if (loading) {
@@ -160,20 +179,22 @@ export default function NutritionCalendarScreen() {
                   ${hasReflections ? 'cursor-pointer' : 'cursor-default'}
                 `}
               >
-                <div className={`text-xs font-medium mb-1 font-body ${
+                <div className={`text-xs font-medium font-body relative ${
                   isToday ? 'text-clay-primary' : 'text-clay-text'
                 }`}>
                   {format(day, 'd')}
+                  {hasReflections && (
+                    <div className="flex gap-0.5 justify-center mt-0.5">
+                      {uniqueMealTypes.map((mealType) => (
+                        <span
+                          key={mealType}
+                          className={`w-1.5 h-1.5 rounded-full ${mealColors[mealType]}`}
+                          title={t(`nutrition.record.mealType.${mealType}`)}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {hasReflections && (
-                  <div className="flex flex-wrap gap-0.5 justify-center">
-                    {uniqueMealTypes.map((mealType) => (
-                      <span key={mealType} className="text-xs" title={t(`nutrition.record.mealType.${mealType}`)}>
-                        {mealIcons[mealType]}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </button>
             );
           })}

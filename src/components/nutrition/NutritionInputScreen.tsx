@@ -10,44 +10,22 @@ export default function NutritionInputScreen() {
   const { t } = useTranslation();
   const { conditions } = useHealthConditions();
   
-  const [ingredients, setIngredients] = useState<string[]>([]);
-  const [currentIngredient, setCurrentIngredient] = useState('');
+  const [ingredientsText, setIngredientsText] = useState('');
   const [energyLevel, setEnergyLevel] = useState<'low' | 'medium' | 'high' | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  const handleAddIngredient = () => {
-    const trimmed = currentIngredient.trim();
-    if (trimmed.length < 2) {
-      setError(t('nutrition.input.ingredientTooShort'));
-      return;
-    }
-    if (ingredients.includes(trimmed)) {
-      setError(t('nutrition.input.duplicateIngredient'));
-      return;
-    }
-    if (ingredients.length >= 50) {
-      setError(t('nutrition.input.tooManyIngredients'));
-      return;
-    }
-    
-    setIngredients([...ingredients, trimmed]);
-    setCurrentIngredient('');
-    setError(null);
-  };
-  
-  const handleRemoveIngredient = (index: number) => {
-    setIngredients(ingredients.filter((_, i) => i !== index));
-  };
-  
   const handleGenerateSuggestions = () => {
-    if (ingredients.length === 0) {
+    const trimmed = ingredientsText.trim();
+    if (trimmed.length === 0) {
       setError(t('nutrition.input.noIngredients'));
       return;
     }
     
+    setError(null);
+    
     navigate('/nutrition/suggestions', {
       state: {
-        ingredients,
+        ingredients: trimmed, // Pass as string, not array
         healthConditions: conditions.map(c => c.conditionName),
         energyLevel,
       },
@@ -69,89 +47,33 @@ export default function NutritionInputScreen() {
         <label className="block mb-2 text-sm font-semibold text-clay-text font-body">
           {t('nutrition.input.ingredientsLabel')}
         </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={currentIngredient}
-            onChange={(e) => setCurrentIngredient(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleAddIngredient();
-              }
-            }}
-            placeholder={t('nutrition.input.ingredientPlaceholder')}
-            className="
-              flex-1
-              p-4
-              rounded-[20px]
-              border-2 border-clay-lavender
-              bg-white
-              text-clay-text
-              font-body
-              text-base
-              focus:outline-none
-              focus:ring-2
-              focus:ring-clay-primary
-              focus:border-clay-primary
-            "
-          />
-          <Button
-            variant="primary"
-            onClick={handleAddIngredient}
-            disabled={!currentIngredient.trim()}
-          >
-            {t('nutrition.input.add')}
-          </Button>
-        </div>
+        <textarea
+          value={ingredientsText}
+          onChange={(e) => setIngredientsText(e.target.value)}
+          placeholder={t('nutrition.input.ingredientPlaceholder')}
+          className="
+            w-full
+            p-4
+            rounded-[20px]
+            border-2 border-clay-lavender
+            bg-white
+            text-clay-text
+            font-body
+            text-base
+            focus:outline-none
+            focus:ring-2
+            focus:ring-clay-primary
+            focus:border-clay-primary
+            resize-none
+            min-h-[120px]
+          "
+        />
         
         {/* Flexibility note */}
         <p className="text-xs text-clay-textDim mt-3 font-body italic">
           {t('nutrition.input.flexibilityNote')}
         </p>
       </Card>
-      
-      {/* Ingredients list */}
-      {ingredients.length > 0 && (
-        <Card className="mb-6">
-          <p className="text-sm font-semibold text-clay-text mb-3 font-body">
-            {t('nutrition.input.addedIngredients')} ({ingredients.length})
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {ingredients.map((ingredient, index) => (
-              <span
-                key={index}
-                className="
-                  inline-flex
-                  items-center
-                  gap-2
-                  px-3
-                  py-2
-                  bg-clay-mint
-                  text-clay-text
-                  rounded-[18px]
-                  text-sm
-                  font-body
-                "
-              >
-                {ingredient}
-                <button
-                  onClick={() => handleRemoveIngredient(index)}
-                  className="
-                    touch-target
-                    text-clay-textDim
-                    hover:text-clay-text
-                    transition-colors
-                  "
-                  aria-label={t('nutrition.input.removeIngredient')}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        </Card>
-      )}
       
       {/* Energy level selector */}
       <Card className="mb-6">
@@ -187,15 +109,6 @@ export default function NutritionInputScreen() {
         </Card>
       )}
       
-      {/* Empty state */}
-      {ingredients.length === 0 && (
-        <Card className="mb-6 border-clay-lavender bg-clay-mint">
-          <p className="text-clay-textDim font-body text-center py-8">
-            {t('nutrition.input.emptyState')}
-          </p>
-        </Card>
-      )}
-      
       {/* Action buttons */}
       <div className="flex gap-3">
         <Button
@@ -209,7 +122,7 @@ export default function NutritionInputScreen() {
           variant="primary"
           fullWidth
           onClick={handleGenerateSuggestions}
-          disabled={ingredients.length === 0}
+          disabled={!ingredientsText.trim()}
         >
           {t('nutrition.input.generateSuggestions')}
         </Button>
@@ -217,4 +130,5 @@ export default function NutritionInputScreen() {
     </div>
   );
 }
+
 

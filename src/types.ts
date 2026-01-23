@@ -109,6 +109,8 @@ export interface MealSuggestion extends BaseEntity {
   isFavorite: boolean;
   timeAwareGuidance: string | null; // NEW: Gentle guidance for late-night context
   isFlexible: boolean; // NEW: Indicates ingredients are optional (default: true)
+  detailedPreparationMethod: string | null; // NEW: Step-by-step numbered list for detail view
+  imageUrl: string | null; // NEW: LLM-generated image URL (generated on-demand when detail view opens)
 }
 
 // Food Reflection Types

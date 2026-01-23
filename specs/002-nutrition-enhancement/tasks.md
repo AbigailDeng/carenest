@@ -19,6 +19,8 @@
 - **US2 (P2)**: Time-Aware Meal Suggestions - Meal suggestions adapt to late-night context with gentle guidance
 - **US3 (P2)**: Enhanced Ingredient Input - Emphasize ingredient flexibility (optional, not required)
 - **US4 (P3)**: Sugar Reduction Easter Egg - Hidden playful feature for reducing sugary drinks
+- **US5 (P2)**: Meal Detail View - Clickable meal suggestion cards open detail view with detailed preparation method, LLM-generated image, and complete meal information
+- **US6 (P2)**: Save Meal as Eaten - Users can save meal suggestions as FoodReflection records, displayed on calendar with same visual markers
 
 ---
 
@@ -105,21 +107,25 @@
 
 ## Phase 5: User Story 3 - Enhanced Ingredient Input (Priority: P2)
 
-**Goal**: Emphasize that ingredients are optional suggestions, not requirements. Update UI and AI prompts to communicate flexibility clearly.
+**Goal**: Replace one-by-one ingredient addition with single textarea for free-form text input. Users type all ingredients as plain text, and LLM parses them. Emphasize that ingredients are optional suggestions, not requirements.
 
-**Independent Test**: User opens ingredient input screen, sees clear messaging that ingredients are optional suggestions. Can generate meal suggestions with partial ingredients. AI suggestions use some or all ingredients.
+**Independent Test**: User opens ingredient input screen, sees single textarea (no "Add" button or ingredient list). User types ingredients as free-form text (e.g., "tomato, pasta, cheese" or "chicken rice"), generates meal suggestions. LLM parses ingredients from text. AI suggestions use some or all identified ingredients.
 
 ### Implementation for User Story 3
 
-- [X] T036 [P] [US3] Enhance NutritionInputScreen with flexibility messaging in src/components/nutrition/NutritionInputScreen.tsx
-- [X] T037 [US3] Update ingredient input placeholder text to emphasize optional nature
-- [X] T038 [US3] Ensure generateMealSuggestions defaults flexible option to true
-- [X] T039 [US3] Display isFlexible indicator in meal suggestion cards
-- [X] T040 [US3] Add ingredient flexibility translation keys to src/i18n/locales/en.ts
-- [X] T041 [US3] Add ingredient flexibility translation keys to src/i18n/locales/zh.ts
-- [X] T042 [US3] Update existing useMealSuggestions hook if needed to support flexibility
+- [X] T036 [US3] Replace one-by-one ingredient input with single textarea in src/components/nutrition/NutritionInputScreen.tsx (remove "Add" button, ingredient list display, and handleAddIngredient/handleRemoveIngredient functions)
+- [X] T037 [US3] Update state management to use single string (ingredientsText) instead of array (ingredients) in NutritionInputScreen
+- [X] T038 [US3] Update MealSuggestionInput interface to accept ingredients as string instead of string[] in src/services/llmService.ts
+- [X] T039 [US3] Update generateMealSuggestions to pass ingredients as string directly to LLM (no parsing) in src/services/llmService.ts
+- [X] T040 [US3] Update prompt template to instruct LLM to parse ingredients from free-form text in src/services/llmService.ts
+- [X] T041 [US3] Update MealSuggestionsScreen to handle ingredients as string from location state in src/components/nutrition/MealSuggestionsScreen.tsx
+- [X] T042 [US3] Update ingredient input placeholder text to guide free-form input in src/components/nutrition/NutritionInputScreen.tsx
+- [X] T043 [US3] Add ingredient flexibility translation keys (updated for textarea) to src/i18n/locales/en.ts
+- [X] T044 [US3] Add ingredient flexibility translation keys (updated for textarea) to src/i18n/locales/zh.ts
+- [X] T045 [US3] Ensure generateMealSuggestions defaults flexible option to true in src/services/llmService.ts
+- [X] T046 [US3] Display isFlexible indicator in meal suggestion cards in src/components/nutrition/MealSuggestionsScreen.tsx
 
-**Checkpoint**: At this point, User Story 3 should be fully functional. Ingredient input clearly communicates flexibility, and meal suggestions reflect this.
+**Checkpoint**: At this point, User Story 3 should be fully functional. Ingredient input uses single textarea for free-form text, LLM parses ingredients, and meal suggestions reflect flexibility.
 
 ---
 
@@ -131,36 +137,87 @@
 
 ### Implementation for User Story 4
 
-- [X] T043 [P] [US4] Create SugarReductionEasterEgg component in src/components/nutrition/SugarReductionEasterEgg.tsx
-- [X] T044 [US4] Implement long-press detection on nutrition tab icon in src/components/shared/BottomTabs.tsx
-- [X] T045 [US4] Add easter egg route to src/navigation/routes.tsx
-- [X] T046 [US4] Implement cup pouring animation/interaction in SugarReductionEasterEgg component
-- [X] T047 [US4] Implement small cup to large cup conversion logic (5 small = 1 large)
-- [X] T048 [US4] Add celebration animation when large cup is formed
-- [X] T049 [US4] Add easter egg translation keys to src/i18n/locales/en.ts
-- [X] T050 [US4] Add easter egg translation keys to src/i18n/locales/zh.ts
-- [X] T051 [US4] Apply playful, cute styling to easter egg component (claymorphic design)
+- [ ] T047 [P] [US4] Create SugarReductionEasterEgg component in src/components/nutrition/SugarReductionEasterEgg.tsx
+- [ ] T048 [US4] Implement long-press detection on nutrition tab icon in src/components/shared/BottomTabs.tsx
+- [ ] T049 [US4] Add easter egg route to src/navigation/routes.tsx
+- [ ] T050 [US4] Implement cup pouring animation/interaction in SugarReductionEasterEgg component
+- [ ] T051 [US4] Implement small cup to large cup conversion logic (5 small = 1 large)
+- [ ] T052 [US4] Add celebration animation when large cup is formed
+- [ ] T053 [US4] Add easter egg translation keys to src/i18n/locales/en.ts
+- [ ] T054 [US4] Add easter egg translation keys to src/i18n/locales/zh.ts
+- [ ] T055 [US4] Apply playful, cute styling to easter egg component (claymorphic design)
 
 **Checkpoint**: At this point, User Story 4 should be fully functional. Hidden easter egg feature is discoverable and playful.
 
 ---
 
-## Phase 7: Polish & Cross-Cutting Concerns
+## Phase 7: User Story 5 - Meal Detail View (Priority: P2)
+
+**Goal**: Meal suggestion cards are clickable. Clicking opens a modal/bottom drawer detail view with detailed step-by-step preparation method, LLM-generated image (generated on-demand), ingredients list, time-aware guidance (if applicable), and flexibility note.
+
+**Independent Test**: User clicks on a meal suggestion card, detail view opens as modal/bottom drawer. Detail view displays detailed preparation method (step-by-step numbered list), ingredients list, LLM-generated image (generated when detail opens), time-aware guidance (if applicable), and flexibility note. User can close detail view to return to suggestions list.
+
+### Implementation for User Story 5
+
+- [X] T068 [P] [US5] Enhance MealSuggestion type with detailedPreparationMethod and imageUrl fields in src/types.ts
+- [X] T069 [US5] Implement generateMealDetail function in src/services/llmService.ts (generates detailed preparation method and image on-demand)
+- [X] T070 [US5] Create MealDetailScreen component as modal/bottom drawer in src/components/nutrition/MealDetailScreen.tsx
+- [X] T071 [US5] Implement click handler on meal suggestion cards in src/components/nutrition/MealSuggestionsScreen.tsx
+- [X] T072 [US5] Add state management for detail view (selected meal, loading, error) in MealSuggestionsScreen
+- [X] T073 [US5] Implement image generation API call in generateMealDetail (using Gemini 2.0 Flash or similar)
+- [X] T074 [US5] Display detailed preparation method as step-by-step numbered list in MealDetailScreen
+- [X] T075 [US5] Display LLM-generated image in MealDetailScreen (with placeholder if generation fails)
+- [X] T076 [US5] Display complete meal information (ingredients, time-aware guidance, flexibility note) in MealDetailScreen
+- [X] T077 [US5] Implement close button/gesture for detail view modal in MealDetailScreen
+- [X] T078 [US5] Add meal detail translation keys to src/i18n/locales/en.ts
+- [X] T079 [US5] Add meal detail translation keys to src/i18n/locales/zh.ts
+- [X] T080 [US5] Apply claymorphic styling to MealDetailScreen (modal/drawer, soft rounded corners, 44x44px touch targets)
+
+**Checkpoint**: At this point, User Story 5 should be fully functional. Users can click meal suggestion cards to view detailed information with images.
+
+---
+
+## Phase 8: User Story 6 - Save Meal as Eaten (Priority: P2)
+
+**Goal**: Users can save meal suggestions as FoodReflection records from the detail view. Saved meals appear on calendar with same visual markers as existing FoodReflection records. Auto-infer mealType based on current time, default reflection to 'normal', allow user to modify before saving.
+
+**Independent Test**: User opens meal detail view, clicks "Save as Eaten" button, sees mealType selection (auto-inferred from current time) and reflection selection (default 'normal'), can modify both, saves. Saved meal appears on calendar with visual markers. If record exists for same date+mealType, overwrites existing record.
+
+### Implementation for User Story 6
+
+- [X] T081 [US6] Add "Save as Eaten" button to MealDetailScreen footer in src/components/nutrition/MealDetailScreen.tsx
+- [X] T082 [US6] Add state management for mealType and reflection selection in MealDetailScreen (auto-infer mealType from current time, default reflection to 'normal')
+- [X] T083 [US6] Implement mealType selection UI (breakfast/lunch/dinner/snack) in MealDetailScreen with auto-inferred default
+- [X] T084 [US6] Implement reflection selection UI (light/normal/indulgent) in MealDetailScreen with 'normal' default
+- [X] T085 [US6] Implement saveMealAsEaten function that creates FoodReflection from MealSuggestion in MealDetailScreen
+- [X] T086 [US6] Use meal name as notes field when creating FoodReflection in saveMealAsEaten function
+- [X] T087 [US6] Handle overwrite logic for existing records (same date+mealType) in saveMealAsEaten function
+- [X] T088 [US6] Add success feedback after saving meal (toast or message) in MealDetailScreen
+- [X] T089 [US6] Close detail view after successful save in MealDetailScreen
+- [X] T090 [US6] Add save meal translation keys to src/i18n/locales/en.ts
+- [X] T091 [US6] Add save meal translation keys to src/i18n/locales/zh.ts
+- [X] T092 [US6] Verify saved meals appear on calendar with correct visual markers in NutritionCalendarScreen
+
+**Checkpoint**: At this point, User Story 6 should be fully functional. Users can save meal suggestions as FoodReflection records, and saved meals appear on calendar.
+
+---
+
+## Phase 9: Polish & Cross-Cutting Concerns
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [X] T052 [P] Update NutritionHomeScreen to show all new features in src/components/shared/Layout.tsx
-- [X] T053 [P] Ensure all nutrition components use claymorphic styling consistently
-- [X] T054 [P] Verify offline support for food reflection (works without network)
-- [X] T055 [P] Verify offline support for ingredient input (works without network)
-- [X] T056 [P] Add error handling and user-friendly error messages across all nutrition components
-- [X] T057 [P] Verify all touch targets meet 44x44px minimum requirement
-- [X] T058 [P] Verify WCAG 2.1 AA accessibility compliance for all nutrition screens
-- [X] T059 [P] Update data export functionality to include foodReflections and sugarReductionCups in src/utils/export.ts
-- [X] T060 [P] Update data deletion functionality to include foodReflections and sugarReductionCups in src/services/storage/indexedDB.ts
-- [X] T061 [P] Run quickstart.md validation checklist
-- [X] T062 [P] Code cleanup and refactoring across nutrition module
-- [X] T063 [P] Performance optimization (ensure <100ms UI interactions, <10s AI response time)
+- [ ] T056 [P] Update NutritionHomeScreen to show all new features in src/components/shared/Layout.tsx
+- [ ] T057 [P] Ensure all nutrition components use claymorphic styling consistently
+- [ ] T058 [P] Verify offline support for food reflection (works without network)
+- [ ] T059 [P] Verify offline support for ingredient input (works without network)
+- [ ] T060 [P] Add error handling and user-friendly error messages across all nutrition components
+- [ ] T061 [P] Verify all touch targets meet 44x44px minimum requirement
+- [ ] T062 [P] Verify WCAG 2.1 AA accessibility compliance for all nutrition screens
+- [ ] T063 [P] Update data export functionality to include foodReflections and sugarReductionCups in src/utils/export.ts
+- [ ] T064 [P] Update data deletion functionality to include foodReflections and sugarReductionCups in src/services/storage/indexedDB.ts
+- [ ] T065 [P] Run quickstart.md validation checklist
+- [ ] T066 [P] Code cleanup and refactoring across nutrition module
+- [ ] T067 [P] Performance optimization (ensure <100ms UI interactions, <10s AI response time)
 
 ---
 
@@ -170,10 +227,10 @@
 
 - **Setup (Phase 1)**: No dependencies - can start immediately
 - **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
-- **User Stories (Phase 3-6)**: All depend on Foundational phase completion
+- **User Stories (Phase 3-8)**: All depend on Foundational phase completion
   - User stories can then proceed in parallel (if staffed)
   - Or sequentially in priority order (P1 → P2 → P3)
-- **Polish (Phase 7)**: Depends on all desired user stories being complete
+- **Polish (Phase 9)**: Depends on all desired user stories being complete
 
 ### User Story Dependencies
 
@@ -181,6 +238,8 @@
 - **User Story 2 (P2)**: Can start after Foundational (Phase 2) - Enhances existing meal suggestions, should work independently
 - **User Story 3 (P2)**: Can start after Foundational (Phase 2) - Enhances existing ingredient input, should work independently
 - **User Story 4 (P3)**: Can start after Foundational (Phase 2) - Completely independent hidden feature
+- **User Story 5 (P2)**: Can start after Foundational (Phase 2) - Enhances meal suggestions (US2), should work independently
+- **User Story 6 (P2)**: Can start after Foundational (Phase 2) - Enhances meal detail view (US5), requires FoodReflection infrastructure (US1)
 
 ### Within Each User Story
 
@@ -196,7 +255,7 @@
 - All Foundational storage tasks marked [P] can run in parallel (T013-T015)
 - Once Foundational phase completes, all user stories can start in parallel (if team capacity allows)
 - Type definitions (T002-T004) can be done in parallel
-- Translation keys for each story can be added in parallel (T026-T027, T033-T034, T040-T041, T049-T050)
+- Translation keys for each story can be added in parallel (T026-T027, T033-T034, T043-T044, T053-T054, T078-T079, T090-T091)
 - Polish tasks marked [P] can all run in parallel
 
 ---
@@ -261,13 +320,15 @@ With multiple developers:
 
 ## Task Summary
 
-- **Total Tasks**: 63
+- **Total Tasks**: 92 (updated: added US6 for save meal as eaten)
 - **Setup Phase**: 8 tasks
 - **Foundational Phase**: 13 tasks
 - **User Story 1 (P1)**: 7 tasks
 - **User Story 2 (P2)**: 7 tasks
-- **User Story 3 (P2)**: 7 tasks
+- **User Story 3 (P2)**: 11 tasks (updated for single textarea input)
 - **User Story 4 (P3)**: 9 tasks
+- **User Story 5 (P2)**: 13 tasks (meal detail view with images)
+- **User Story 6 (P2)**: 12 tasks (save meal as eaten)
 - **Polish Phase**: 12 tasks
 
 ### Suggested MVP Scope
@@ -278,12 +339,16 @@ With multiple developers:
 - Phase 3: User Story 1 (7 tasks)
 - **Total MVP Tasks**: 28 tasks
 
+**Note**: User Story 3 tasks have been updated to reflect the clarification: single textarea for free-form ingredient input instead of one-by-one addition.
+
 ### Independent Test Criteria
 
 - **US1**: User can reflect on daily eating (light/normal/indulgent) with optional notes, one per day
 - **US2**: Meal suggestions adapt to late-night context (after 9 PM) with gentle guidance
-- **US3**: Ingredient input clearly communicates flexibility, suggestions use some or all ingredients
+- **US3**: Ingredient input uses single textarea for free-form text, LLM parses ingredients, suggestions use some or all identified ingredients
 - **US4**: Hidden easter egg discoverable via long-press, cup pouring works, 5 small = 1 large
+- **US5**: Meal suggestion cards are clickable, detail view opens as modal/drawer with detailed preparation method (step-by-step), LLM-generated image, and complete information
+- **US6**: Users can save meal suggestions as FoodReflection records from detail view, saved meals appear on calendar with visual markers, auto-infer mealType and reflection with user modification option
 
 ---
 
@@ -305,8 +370,8 @@ With multiple developers:
 ## Format Validation
 
 ✅ All tasks follow checklist format: `- [ ] [TaskID] [P?] [Story?] Description with file path`
-✅ All tasks have sequential IDs (T001-T063)
-✅ All user story tasks have [Story] labels ([US1], [US2], [US3], [US4])
+✅ All tasks have sequential IDs (T001-T092 for all tasks)
+✅ All user story tasks have [Story] labels ([US1], [US2], [US3], [US4], [US5], [US6])
 ✅ All parallelizable tasks marked with [P]
 ✅ All tasks include exact file paths
 ✅ Tasks organized by user story for independent implementation

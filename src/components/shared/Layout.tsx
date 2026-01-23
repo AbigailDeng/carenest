@@ -216,12 +216,12 @@ function NutritionHomeScreen() {
   const firstDayOfWeek = getDay(monthStart);
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
-  // Meal type icons
-  const mealIcons: Record<MealType, string> = {
-    breakfast: '🌅',
-    lunch: '🍽️',
-    dinner: '🌙',
-    snack: '🌃',
+  // Meal type colors for dots
+  const mealColors: Record<MealType, string> = {
+    breakfast: 'bg-orange-400', // 早餐 - 橙色
+    lunch: 'bg-blue-400',       // 午餐 - 蓝色
+    dinner: 'bg-purple-400',    // 晚餐 - 紫色
+    snack: 'bg-gray-400',       // 夜宵 - 灰色
   };
 
   const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -303,10 +303,21 @@ function NutritionHomeScreen() {
                     ${hasReflections ? 'cursor-pointer' : 'cursor-default'}
                   `}
                 >
-                  <div className={`text-xs font-medium font-body ${
+                  <div className={`text-xs font-medium font-body relative ${
                     isToday ? 'text-clay-primary' : 'text-clay-text'
                   }`}>
                     {format(day, 'd')}
+                    {hasReflections && (
+                      <div className="flex gap-0.5 justify-center mt-0.5">
+                        {uniqueMealTypes.map((mealType) => (
+                          <span
+                            key={mealType}
+                            className={`w-1.5 h-1.5 rounded-full ${mealColors[mealType]}`}
+                            title={t(`nutrition.record.mealType.${mealType}`)}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </button>
               );

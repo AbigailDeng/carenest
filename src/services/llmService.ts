@@ -51,7 +51,7 @@ export interface SymptomAnalysisOutput {
 }
 
 export interface MealSuggestionInput {
-  ingredients: string[];
+  ingredients: string; // Free-form text input - LLM will parse individual ingredients
   healthConditions?: string[];
   energyLevel?: 'low' | 'medium' | 'high';
   dietaryPreferences?: string[];
@@ -641,7 +641,8 @@ export async function generateMealSuggestions(
   input: MealSuggestionInput,
   options?: MealSuggestionOptions
 ): Promise<MealSuggestionOutput[]> {
-  if (input.ingredients.length === 0) {
+  const trimmedIngredients = input.ingredients.trim();
+  if (trimmedIngredients.length === 0) {
     return [];
   }
 
@@ -670,14 +671,16 @@ ${lateNight ? (isChinese ?
   '\n[当前时间是深夜 - 晚上9点后]\n\n这是深夜时段。请提供温和、舒适的餐食建议，重点关注轻松、易于准备的选项。使用支持性、非评判性的语言。强调自我关怀和舒适，而不是严格的营养规则。不要对深夜进食进行评判。' :
   '\n[Current time is late night - after 9 PM]\n\nThis is late night. Please provide gentle, comforting meal suggestions, focusing on light, easy-to-prepare options. Use supportive, non-judgmental language about eating times. Emphasize self-care and comfort, not strict nutrition rules. No judgment about late-night eating.') : ''}
 
-${isChinese ? '用户提供的可用食材（共${input.ingredients.length}种）：' : `Available ingredients provided by the user (total ${input.ingredients.length}):`}
-${input.ingredients.map(ing => `- ${ing}`).join('\n')}
+${isChinese ? '用户提供的可用食材（自由文本，请解析并识别其中的单个食材）：' : 'Available ingredients provided by the user (free-form text - please parse and identify individual ingredients from the text):'}
+${trimmedIngredients}
+
+${isChinese ? '\n重要提示：请从上述文本中解析并识别出所有食材。食材可能用逗号、空格或其他方式分隔。解析后，请尽量使用识别出的食材来制作餐食建议。' : '\nIMPORTANT: Please parse and identify all individual ingredients from the text above. Ingredients may be separated by commas, spaces, or other delimiters. After parsing, try to use the identified ingredients to create meal suggestions.'}
 
 ${adaptationContext ? `${isChinese ? '\n其他考虑因素：' : '\nAdditional considerations:'}\n${adaptationContext}` : ''}
 
 ${flexible ? (isChinese ? 
-  `\n重要提示：你必须提供正好3道菜，并且要尽量使用所有提供的食材。餐食建议应该：\n- 必须提供正好3道不同的菜品\n- 尽量使用所有用户提供的食材，确保所有${input.ingredients.length}种食材都被使用到（可以分散到3道菜中）\n- 同一食材可以在多道菜中重复使用\n- 可以添加常见的、容易获得的辅助食材（如盐、油、调味料等）\n- 如果某些食材难以获得，可以提供合理的替代方案\n- 确保建议的餐食是实际可行的，不要建议过于复杂或需要特殊设备的菜品\n- 优先考虑如何合理分配食材，让用户能够用这些食材做出3道不同的菜\n- 每道菜应该使用不同的主要食材组合，避免重复\n- 在返回的JSON数组中，确保3道菜使用的食材加起来覆盖了大部分或全部用户提供的食材` :
-  `\nIMPORTANT: You must provide exactly 3 dishes and try to use all provided ingredients. Meal suggestions should:\n- Must provide exactly 3 different dishes\n- Try to use all user-provided ingredients, ensuring all ${input.ingredients.length} ingredients are used (can be distributed across 3 dishes)\n- The same ingredient can be used in multiple dishes\n- May add common, easily available supporting ingredients (like salt, oil, seasonings, etc.)\n- If some ingredients are hard to find, provide reasonable alternatives\n- Ensure suggested meals are practical and feasible, do not suggest overly complex dishes or those requiring special equipment\n- Prioritize how to reasonably distribute ingredients so users can make 3 different dishes with these ingredients\n- Each dish should use different main ingredient combinations to avoid repetition\n- In the returned JSON array, ensure the 3 dishes together cover most or all of the user-provided ingredients`) : ''}
+  `\n重要提示：你必须提供正好3道菜，并且要尽量使用识别出的食材。餐食建议应该：\n- 必须提供正好3道不同的菜品\n- 尽量使用从文本中识别出的食材（可以分散到3道菜中）\n- 同一食材可以在多道菜中重复使用\n- 可以添加常见的、容易获得的辅助食材（如盐、油、调味料等）\n- 如果某些食材难以获得，可以提供合理的替代方案\n- 确保建议的餐食是实际可行的，不要建议过于复杂或需要特殊设备的菜品\n- 优先考虑如何合理分配食材，让用户能够用这些食材做出3道不同的菜\n- 每道菜应该使用不同的主要食材组合，避免重复\n- 在返回的JSON数组中，确保3道菜使用的食材加起来覆盖了大部分或全部从文本中识别出的食材\n- 食材是建议，不是要求。餐食想法可以使用部分或全部识别出的食材。` :
+  `\nIMPORTANT: You must provide exactly 3 dishes and try to use the identified ingredients. Meal suggestions should:\n- Must provide exactly 3 different dishes\n- Try to use ingredients identified from the text (can be distributed across 3 dishes)\n- The same ingredient can be used in multiple dishes\n- May add common, easily available supporting ingredients (like salt, oil, seasonings, etc.)\n- If some ingredients are hard to find, provide reasonable alternatives\n- Ensure suggested meals are practical and feasible, do not suggest overly complex dishes or those requiring special equipment\n- Prioritize how to reasonably distribute ingredients so users can make 3 different dishes with these ingredients\n- Each dish should use different main ingredient combinations to avoid repetition\n- In the returned JSON array, ensure the 3 dishes together cover most or all of the identified ingredients\n- Ingredients are suggestions, not requirements. Meal ideas can use some or all of the identified ingredients.`) : ''}
 
 ${isChinese ? '\n请提供正好3个具体的餐食建议（必须正好3个，不能多也不能少），每个建议必须包含：' : '\nPlease provide exactly 3 specific meal suggestions (must be exactly 3, no more, no less). Each suggestion must include:'}
 ${isChinese ? 
@@ -915,6 +918,95 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
     suggestions,
     suitability,
     disclaimer,
+  };
+}
+
+/**
+ * Generate detailed preparation method and image for a meal suggestion
+ * Called on-demand when user opens detail view
+ */
+export async function generateMealDetail(
+  mealSuggestion: { mealName: string; description: string; ingredients: string[]; preparationNotes: string | null }
+): Promise<{
+  detailedPreparationMethod: string;  // Step-by-step numbered list
+  imageUrl: string | null;            // LLM-generated image URL (null if generation fails)
+}> {
+  const userLanguage = await getUserLanguage();
+  const isChinese = userLanguage === 'zh';
+
+  // Generate detailed preparation method
+  const preparationPrompt = `${SAFETY_GUARDRAILS}
+
+${isChinese ? '你是一个支持性的营养伴侣，帮助用户理解如何制作餐食。请根据以下餐食信息，提供详细的分步制作方法。' : 'You are a supportive nutrition companion helping users understand how to prepare a meal. Based on the following meal information, provide a detailed step-by-step preparation method.'}
+
+${isChinese ? '餐食名称：' : 'Meal Name:'} ${mealSuggestion.mealName}
+${isChinese ? '描述：' : 'Description:'} ${mealSuggestion.description}
+${isChinese ? '食材：' : 'Ingredients:'} ${mealSuggestion.ingredients.join(', ')}
+${mealSuggestion.preparationNotes ? `${isChinese ? '基本制作说明：' : 'Basic Preparation Notes:'} ${mealSuggestion.preparationNotes}` : ''}
+
+${isChinese ? '请提供详细的分步制作方法，使用编号列表格式（1. 第一步\n2. 第二步\n3. 第三步...）。每一步应该清晰、具体、可操作。' : 'Please provide a detailed step-by-step preparation method in numbered list format (1. First step\n2. Second step\n3. Third step...). Each step should be clear, specific, and actionable.'}
+
+${isChinese ? '请只返回编号列表，不要添加其他说明文字。' : 'Please return only the numbered list, without any additional explanatory text.'}`;
+
+  let detailedPreparationMethod = '';
+  try {
+    const response = await callLLM([
+      { role: 'system', content: SAFETY_GUARDRAILS },
+      { role: 'user', content: preparationPrompt },
+    ], 0.7, 1000);
+
+    detailedPreparationMethod = response.trim();
+    
+    // Ensure it's in numbered list format
+    if (!detailedPreparationMethod.match(/^\d+\./)) {
+      // If response doesn't start with number, try to format it
+      const lines = detailedPreparationMethod.split('\n').filter(line => line.trim());
+      detailedPreparationMethod = lines.map((line, index) => {
+        const trimmed = line.trim();
+        // If line already starts with number, keep it
+        if (trimmed.match(/^\d+\./)) {
+          return trimmed;
+        }
+        // Otherwise, add number
+        return `${index + 1}. ${trimmed}`;
+      }).join('\n');
+    }
+  } catch (error: any) {
+    console.error('Failed to generate detailed preparation method:', error);
+    // Fallback to basic preparation notes if available
+    detailedPreparationMethod = mealSuggestion.preparationNotes || 
+      (isChinese ? '制作方法暂不可用' : 'Preparation method unavailable');
+  }
+
+  // Generate image using image generation API
+  let imageUrl: string | null = null;
+  try {
+    // Note: Image generation API endpoint needs to be configured
+    // For now, we'll attempt to call an image generation endpoint
+    // The exact endpoint format depends on the image generation service available
+    
+    // Using Gemini's image generation capability if available
+    // This is a placeholder - actual implementation depends on available API
+    const imagePrompt = `${mealSuggestion.mealName}: ${mealSuggestion.description}`;
+    
+    // Attempt to generate image via API
+    // If image generation API is not available, imageUrl will remain null
+    // and UI will show a placeholder
+    
+    // TODO: Implement actual image generation API call
+    // For now, return null to indicate image generation is not yet implemented
+    // This allows the feature to work without images while image generation is being set up
+    imageUrl = null;
+    
+  } catch (error: any) {
+    console.error('Failed to generate image:', error);
+    // Image generation failure is not critical - continue without image
+    imageUrl = null;
+  }
+
+  return {
+    detailedPreparationMethod,
+    imageUrl,
   };
 }
 

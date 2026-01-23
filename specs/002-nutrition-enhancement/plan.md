@@ -7,6 +7,27 @@
 
 Enhance the Nutrition module with a gentle, non-restrictive design that focuses on flexibility, low pressure, and supportive guidance. The enhancement includes daily meal suggestions based on optional ingredients, simple daily food reflection without calorie counting, time-aware suggestions for late-night interactions, and a hidden playful feature for reducing sugary drinks. All features maintain a supportive, empathetic tone with no punishment or failure states.
 
+## Clarifications
+
+### Session 2025-01-27
+
+- Q: How should ingredient input be structured? Should users add ingredients one-by-one or input all at once? → A: Users input all ingredients as free-form text in a single textarea. No frontend parsing required - the raw text is sent directly to the LLM, which will intelligently identify individual ingredients from the text.
+- Q: How should meal suggestion detail view be presented? Modal/overlay, separate screen, or expand/collapse? → A: Modal/bottom drawer (opens on current page, can be closed to return) - better mobile UX, aligns with existing design patterns.
+- Q: How should images be provided in the detail view? → A: LLM generates images (call image generation API, e.g., Gemini 2.0 Flash).
+- Q: What content should be included in the detail view? → A: Complete information: detailed preparation method (step-by-step), ingredients list, image, time-aware guidance (if applicable), flexibility note.
+- Q: When should images be generated? → A: Generate on detail view click (user opens detail view, then call image generation API) - faster initial suggestions display, on-demand generation, reduces unnecessary API calls.
+- Q: What format should the detailed preparation method use in the detail view? → A: Step-by-step numbered list (one step per line) - clearer, easier to follow, aligns with recipe presentation conventions.
+- Q: What format should the detailed preparation method use in the detail view? → A: Step-by-step numbered list (numbered list, one step per line) - clearer, easier to follow, aligns with recipe presentation conventions.
+- Q: What does "saving a meal" mean? → A: Create a FoodReflection record from meal suggestion, save to calendar - aligns with existing calendar display logic, allows users to record meals they actually ate.
+- Q: How should users trigger "save meal" action? → A: Add "Save as Eaten" button in detail view (MealDetailScreen) - users can view details then save, aligns with existing flow.
+- Q: What information is needed when saving a meal? → A: Auto-infer mealType (based on current time), allow user to modify; use meal name as notes - simplifies flow, reduces input burden.
+- Q: How should saved meals be displayed on calendar? → A: Use same visual markers as existing FoodReflection (border highlight, background color, meal type icons) - maintains consistency, users already familiar with pattern.
+- Q: If a record already exists for same date and meal type, how to handle saving meal? → A: Overwrite existing record (update with new meal information) - aligns with existing FoodReflection data model (one record per date+mealType).
+- Q: How should reflection field (light/normal/indulgent) be set when saving meal? → A: Default to 'normal', allow user to modify before saving - simplifies flow while maintaining flexibility.
+- Q: When should calendar refresh to show newly saved meals? → A: Calendar should automatically refresh when user navigates back to calendar screen or when page becomes visible (using visibilitychange event and location change detection) - ensures saved meals appear immediately without manual refresh.
+- Q: Where should saved meals be displayed on calendar? → A: Both NutritionHomeScreen (营养助手主页) and NutritionCalendarScreen (营养日历页面) must display meal type icons (🌅🍽️🌙🌃) for dates with saved meals - users may view calendar from either screen, both must show consistent visual markers.
+- Q: How should saved meals be visually marked on calendar to avoid making date cells too tall? → A: Use small colored dots (●) instead of full icons, with different colors for different meal types (breakfast/lunch/dinner/snack) - compact, doesn't increase cell height, maintains visual distinction between meal types.
+
 ## Technical Context
 
 **Language/Version**: TypeScript 5.x, React 18.x  
@@ -154,9 +175,10 @@ src/
 
 **LLM Service Contract** (`contracts/llm-service.md`):
 - `generateMealSuggestions(input, options)`: Enhanced with time-aware guidance
-  - Input: ingredients (array), healthConditions (optional), energyLevel (optional), currentTime (optional)
+  - Input: ingredients (string - free-form text, not parsed array), healthConditions (optional), energyLevel (optional), currentTime (optional)
   - Output: meal suggestions with time-aware guidance if late night
   - Options: `timeAware`: boolean (enable time-aware suggestions)
+  - Note: LLM is responsible for parsing and identifying individual ingredients from the free-form text input
 
 **Storage Service Contract** (`contracts/storage-service.md`):
 - `saveFoodReflection(reflection)`: Save or update daily food reflection
@@ -166,9 +188,10 @@ src/
 ### Component Design
 
 1. **FoodReflectionScreen**: Simple screen with three large buttons (light/normal/indulgent), optional notes field, save button
-2. **Enhanced MealSuggestionsScreen**: Add time-aware messaging when opened late at night
-3. **Enhanced NutritionInputScreen**: Emphasize ingredient flexibility (optional, not required)
-4. **SugarReductionEasterEgg**: Hidden component accessible via special gesture or hidden button
+2. **Enhanced MealSuggestionsScreen**: Add time-aware messaging when opened late at night. Meal suggestion cards are clickable to open detail view.
+3. **Enhanced NutritionInputScreen**: Single textarea for free-form ingredient input (users type all ingredients as plain text). No "add" button or ingredient list management. Raw text is sent directly to LLM for parsing. Emphasize ingredient flexibility (optional, not required).
+4. **MealDetailScreen**: Modal/bottom drawer component that displays detailed meal information when user clicks on a meal suggestion card. Includes: detailed step-by-step preparation method (numbered list), ingredients list, generated image (LLM-generated on detail view open), time-aware guidance (if applicable), flexibility note. Images are generated on-demand when detail view is opened. Also includes "Save as Eaten" button to create FoodReflection record from meal suggestion (auto-infer mealType based on current time, default reflection to 'normal', allow user to modify before saving).
+5. **SugarReductionEasterEgg**: Hidden component accessible via special gesture or hidden button
 
 ## Phase 0: Complete ✅
 
