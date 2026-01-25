@@ -1,0 +1,21 @@
+<svg width="800" height="1200" viewBox="0 0 800 1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="nightSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E293B;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#334155;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#475569;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="moon" cx="50%" cy="30%">
+      <stop offset="0%" style="stop-color:#FEF3C7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FEF3C7;stop-opacity:0.2" />
+    </radialGradient>
+  </defs>
+  <rect width="800" height="1200" fill="url(#nightSky)"/>
+  <circle cx="400" cy="360" r="60" fill="url(#moon)"/>
+  <circle cx="100" cy="200" r="2" fill="#FEF3C7"/>
+  <circle cx="150" cy="180" r="1.5" fill="#FEF3C7"/>
+  <circle cx="700" cy="250" r="2" fill="#FEF3C7"/>
+  <circle cx="650" cy="220" r="1.5" fill="#FEF3C7"/>
+  <path d="M 0 800 Q 200 700, 400 750 Q 600 700, 800 800 L 800 1200 L 0 1200 Z" fill="#1F2937"/>
+  <text x="400" y="1100" font-family="Arial" font-size="24" fill="#9CA3AF" text-anchor="middle">Night Scene</text>
+</svg>

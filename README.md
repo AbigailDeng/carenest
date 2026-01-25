@@ -36,12 +36,27 @@ AI-powered personal health companion app for tracking health, nutrition, and emo
 
 ## 📱 Features
 
+### Companion Character System (New!)
+- ✅ **2D anime companion character** - Daily interaction with empathetic companion
+- ✅ **Home screen with character** - Beautiful otome game-style interface with character illustration and entry cards
+- ✅ **State-aware dialogue** - Character responds based on mood, closeness, time-of-day, and relationship stage
+- ✅ **Emotional support** - Express feelings and receive empathetic, context-aware responses
+- ✅ **Activity integration** - Character acknowledges health/nutrition activities and guides users to modules
+- ✅ **Relationship building** - Closeness level increases with daily interaction (stranger → acquaintance → friend → close friend → intimate)
+- ✅ **Proactive dialogue** - Character initiates greetings based on time-of-day and inactivity patterns
+
 ### Health Tracking (MVP)
 - ✅ Upload medical records (text/image/PDF)
 - ✅ AI-generated plain-language summaries
 - ✅ Lifestyle suggestions (avoid/prefer/general)
 - ✅ Symptom logging with severity tracking
 - ✅ Health timeline view
+
+### Nutrition Tracking (MVP)
+- ✅ Food reflection logging (light/normal/indulgent)
+- ✅ Meal suggestions based on health conditions
+- ✅ Nutrition calendar view
+- ✅ Timeline tracking
 
 ### Privacy & Data Management (MVP)
 - ✅ View all stored data
@@ -67,6 +82,26 @@ The language preference is saved and applied throughout the app.
 See [MULTILINGUAL.md](./MULTILINGUAL.md) for more details.
 
 ## 🧪 Testing the App
+
+### 0. Companion Character System
+
+**Home Screen:**
+- Open app at root path `/` to see companion character and three entry cards
+- Character displays state-aware greeting based on time-of-day and relationship stage
+- Click entry cards to navigate to Health, Nutrition, or Emotion modules
+
+**Companion Conversation:**
+- Navigate to `/companion` or click "陪伴" (Companion) in bottom navigation
+- Send messages to companion and receive empathetic responses
+- Character state (mood, closeness, energy) affects dialogue tone
+- Express emotions (sad, stressed, lonely, happy) to receive emotional support
+- Character acknowledges when you complete health/nutrition activities
+
+**Relationship Building:**
+- Interact daily to increase closeness level (0-100)
+- Relationship stages: Stranger (0) → Acquaintance (21) → Friend (41) → Close Friend (61) → Intimate (81+)
+- Character mood updates based on your emotional expressions
+- Energy level adjusts based on time-of-day (morning: high, afternoon: medium, evening: low)
 
 ### 1. Health Tracking
 
@@ -118,11 +153,23 @@ See [MULTILINGUAL.md](./MULTILINGUAL.md) for more details.
 ```
 src/
 ├── components/      # React components
+│   ├── companion/   # Companion character system screens
 │   ├── health/     # Health tracking screens
+│   ├── nutrition/  # Nutrition tracking screens
 │   ├── privacy/    # Privacy & data management screens
 │   └── shared/     # Shared UI components
 ├── hooks/          # Custom React hooks
+│   ├── useCompanion.ts
+│   ├── useCharacterState.ts
+│   ├── useConversation.ts
+│   └── useProactiveDialogue.ts
 ├── services/       # External APIs & storage
+│   ├── companionService.ts  # Dialogue generation
+│   └── storage/    # IndexedDB storage services
+├── config/         # Character configurations
+│   └── characters/ # Character configs (baiqi.json)
+├── assets/         # Character assets
+│   └── characters/ # Character images and backgrounds
 ├── utils/          # Utility functions
 ├── types.ts        # TypeScript type definitions
 └── db.ts           # IndexedDB database setup
@@ -132,8 +179,11 @@ src/
 
 - All data is stored locally in IndexedDB (browser storage)
 - AI features require explicit user consent
-- Works offline for core features (symptom logging, data viewing)
+- Works offline for core features (symptom logging, data viewing, conversation history)
+- Companion dialogue generation requires internet connection (falls back to templates when offline)
 - AI processing queues when offline and processes when online
+- Companion character state persists across sessions
+- Conversation history stored locally (no cloud sync)
 
 ## 🔒 Privacy
 

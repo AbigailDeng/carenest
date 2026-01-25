@@ -26,6 +26,10 @@ export const zh = {
     nutritionCompanion: '营养助手',
     emotionalSupport: '情感支持',
     privacyData: '隐私与数据',
+    healthDescription: '追踪您的健康状况和症状',
+    nutritionDescription: '管理您的日常营养',
+    emotionalDescription: '表达您的情感',
+    tapCharacter: '点击角色开始',
   },
   health: {
     title: '健康追踪',
@@ -33,6 +37,8 @@ export const zh = {
     logSymptoms: '记录症状',
     viewTimeline: '查看时间线',
     backToHealth: '返回健康',
+    companionPrompt: '在这里记录一下吧，我会帮你看着的。',
+    ledgerPrompt: '这是我为你整理的记录，想先看哪一部分？',
     loadingTimeline: '正在加载时间线...',
     recordNotFound: '未找到医疗记录。',
     noSuggestions: '没有可用的生活方式建议。',
@@ -89,6 +95,12 @@ export const zh = {
       whenToSeekHelp: '何时寻求专业帮助',
       aiDiagnosis: 'AI 诊断',
       aiAnalysisReady: 'AI 分析就绪',
+      symptomPrompt: '哪里不舒服吗？别瞒着我。',
+      freeDescriptionLabel: '自由描述区',
+      freeDescriptionPlaceholder: '自由描述您的症状...',
+      uploadMedicalRecord: '上传病历/处方',
+      letHimLook: '交给他看看',
+      rememberedInHeart: '他已将你的情况记在心上。',
     },
     timeline: {
       title: '健康时间线',
@@ -120,12 +132,14 @@ export const zh = {
   privacy: {
     title: '隐私设置',
     dataStorage: '数据存储',
-    dataStorageDesc: '您的所有健康数据都使用 IndexedDB 存储在您设备的本地。除非您明确同意 AI 处理，否则不会将数据发送到外部服务器。',
+    dataStorageDesc:
+      '您的所有健康数据都使用 IndexedDB 存储在您设备的本地。除非您明确同意 AI 处理，否则不会将数据发送到外部服务器。',
     storedLocally: '数据存储在您设备的本地',
     noAutoTransmission: '无自动数据传输',
     fullControl: '完全控制您的数据',
     aiConsent: 'AI 处理',
-    aiConsentDesc: '当您上传文件或使用 AI 功能时，AI 处理会自动启用。如果您只想在本地存储数据，可以在此处禁用它。这需要互联网连接。',
+    aiConsentDesc:
+      '当您上传文件或使用 AI 功能时，AI 处理会自动启用。如果您只想在本地存储数据，可以在此处禁用它。这需要互联网连接。',
     enableAI: '启用 AI 处理',
     consentGiven: '已同意',
     consentNotGiven: '未同意',
@@ -212,9 +226,11 @@ export const zh = {
     severe: '严重',
   },
   tabs: {
+    home: '首页',
     health: '健康',
     nutrition: '营养',
     emotional: '情感',
+    companion: '陪伴',
   },
   settings: {
     title: '设置',
@@ -256,11 +272,6 @@ export const zh = {
       reanalyze: '重新分析',
       failedToAnalyze: 'AI分析失败',
       offline: '您处于离线状态。AI分析需要互联网连接。记录将保存在本地。',
-    },
-    calendar: {
-      title: '营养日历',
-      legend: '图例',
-      viewTimeline: '查看时间线',
     },
     calendar: {
       title: '营养日历',
@@ -357,5 +368,17 @@ export const zh = {
       confirmReset: '您确定要重置所有杯子吗？',
     },
   },
+  companion: {
+    title: '陪伴',
+    send: '发送',
+    typeMessage: '输入消息...',
+    generating: '正在生成回复...',
+    generatingNote: '请稍候，我正在思考...',
+    offline: '您处于离线状态。使用模板回复。',
+    noMessages: '开始与您的陪伴对话',
+    error: '发送消息失败',
+    close: '关闭',
+    contactByPhone: '与他手机联系',
+    chatFreely: '随心交谈甜蜜温馨',
+  },
 };
-

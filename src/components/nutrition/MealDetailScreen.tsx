@@ -96,6 +96,14 @@ export default function MealDetailScreen({
       );
 
       setSaveSuccess(true);
+
+      // Trigger custom event to notify calendar components to refresh
+      window.dispatchEvent(
+        new CustomEvent('foodReflectionSaved', {
+          detail: { date: today, mealType: selectedMealType },
+        })
+      );
+
       // Close drawer after a short delay to show success message
       setTimeout(() => {
         onClose();
@@ -125,43 +133,41 @@ export default function MealDetailScreen({
       <div
         className={`
           fixed left-0 right-0 bottom-0
-          max-h-[90vh] bg-white rounded-t-[20px] z-50
+          max-h-[90vh] bg-white rounded-t-3xl z-50
           transform transition-transform duration-300 ease-out
           ${isOpen ? 'translate-y-0' : 'translate-y-full'}
           flex flex-col
-          shadow-clay-extrude
+          shadow-2xl
         `}
       >
         {/* Handle bar */}
-        <div className="flex justify-center pt-2 pb-1">
-          <div className="w-12 h-1 bg-clay-textDim rounded-full" />
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-16 h-1.5 bg-gray-300 rounded-full" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-clay-lavender">
-          <h2 className="text-xl font-heading text-clay-text">
-            {meal.mealName}
-          </h2>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
+          <h2 className="text-2xl font-heading text-gray-900">{meal.mealName}</h2>
           <button
             onClick={onClose}
-            className="touch-target p-2 text-clay-textDim hover:text-clay-text rounded-[18px] hover:bg-clay-mint transition-colors"
+            className="touch-target p-2 text-gray-500 hover:text-gray-900 rounded-xl hover:bg-gray-100 transition-colors"
             aria-label={t('common.close')}
           >
-            <span className="text-2xl">×</span>
+            <span className="text-3xl leading-none">×</span>
           </button>
         </div>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
           {/* Loading indicator */}
           {loading && (
-            <Card className="mb-6">
+            <Card className="mb-6 bg-blue-50 border border-blue-200 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-clay-text mb-1 font-body">
+                  <p className="font-medium text-blue-900 mb-1 font-body text-base">
                     {t('nutrition.detail.generating')}
                   </p>
-                  <p className="text-sm text-clay-textDim font-body">
+                  <p className="text-sm text-blue-700 font-body">
                     {t('nutrition.detail.generatingNote')}
                   </p>
                 </div>
@@ -171,20 +177,18 @@ export default function MealDetailScreen({
           )}
 
           {/* Description */}
-          <Card className="mb-6">
-            <p className="text-clay-textDim font-body">
-              {meal.description}
-            </p>
+          <Card className="mb-6 bg-gray-50 border-0 shadow-sm">
+            <p className="text-gray-700 font-body leading-relaxed">{meal.description}</p>
           </Card>
 
           {/* Image */}
           {imageUrl ? (
-            <Card className="mb-6 p-0 overflow-hidden">
+            <Card className="mb-6 p-0 overflow-hidden rounded-xl shadow-md">
               <img
                 src={imageUrl}
                 alt={meal.mealName}
                 className="w-full h-auto object-cover"
-                onError={(e) => {
+                onError={e => {
                   // Fallback to placeholder if image fails to load
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
@@ -192,10 +196,10 @@ export default function MealDetailScreen({
             </Card>
           ) : (
             !loading && (
-              <Card className="mb-6 border-clay-lavender bg-clay-mint">
-                <div className="flex flex-col items-center justify-center py-12">
+              <Card className="mb-6 bg-gray-100 border-0 shadow-sm">
+                <div className="flex flex-col items-center justify-center py-16">
                   <span className="text-6xl mb-4">🍽️</span>
-                  <p className="text-clay-textDim font-body text-center">
+                  <p className="text-gray-500 font-body text-center">
                     {t('nutrition.detail.noImage')}
                   </p>
                 </div>
@@ -205,11 +209,11 @@ export default function MealDetailScreen({
 
           {/* Ingredients */}
           {meal.ingredients.length > 0 && (
-            <Card className="mb-6">
-              <p className="text-sm font-semibold text-clay-text mb-2 font-body">
+            <Card className="mb-6 bg-white shadow-sm border-0">
+              <p className="text-sm font-semibold text-gray-800 mb-3 font-body uppercase tracking-wide">
                 {t('nutrition.suggestions.ingredients')}:
               </p>
-              <ul className="list-disc list-inside text-sm text-clay-textDim font-body space-y-1">
+              <ul className="list-disc list-inside text-sm text-gray-700 font-body space-y-2">
                 {meal.ingredients.map((ing, idx) => (
                   <li key={idx}>{ing}</li>
                 ))}
@@ -219,13 +223,13 @@ export default function MealDetailScreen({
 
           {/* Detailed Preparation Method */}
           {preparationSteps.length > 0 && (
-            <Card className="mb-6">
-              <p className="text-sm font-semibold text-clay-text mb-3 font-body">
+            <Card className="mb-6 bg-white shadow-sm border-0">
+              <p className="text-sm font-semibold text-gray-800 mb-4 font-body uppercase tracking-wide">
                 {t('nutrition.detail.preparationMethod')}:
               </p>
-              <ol className="list-decimal list-inside text-sm text-clay-textDim font-body space-y-2">
+              <ol className="list-decimal list-inside text-sm text-gray-700 font-body space-y-3">
                 {preparationSteps.map((step, idx) => (
-                  <li key={idx} className="pl-2">
+                  <li key={idx} className="pl-2 leading-relaxed">
                     {step.replace(/^\d+\.\s*/, '')}
                   </li>
                 ))}
@@ -235,11 +239,11 @@ export default function MealDetailScreen({
 
           {/* Fallback to basic preparation notes if detailed method not available */}
           {preparationSteps.length === 0 && meal.preparationNotes && (
-            <Card className="mb-6">
-              <p className="text-sm font-semibold text-clay-text mb-2 font-body">
+            <Card className="mb-6 bg-white shadow-sm border-0">
+              <p className="text-sm font-semibold text-gray-800 mb-2 font-body uppercase tracking-wide">
                 {t('nutrition.suggestions.preparation')}:
               </p>
-              <p className="text-sm text-clay-textDim font-body">
+              <p className="text-sm text-gray-700 font-body leading-relaxed">
                 {meal.preparationNotes}
               </p>
             </Card>
@@ -247,10 +251,10 @@ export default function MealDetailScreen({
 
           {/* Time-aware guidance */}
           {meal.timeAwareGuidance && (
-            <Card className="mb-6 border-purple-100 bg-purple-50">
+            <Card className="mb-6 bg-indigo-50 border border-indigo-200 shadow-sm">
               <div className="flex items-start gap-3">
                 <span className="text-2xl">🌙</span>
-                <p className="text-sm text-purple-800 font-body italic">
+                <p className="text-sm text-indigo-800 font-body italic leading-relaxed">
                   {meal.timeAwareGuidance}
                 </p>
               </div>
@@ -259,39 +263,43 @@ export default function MealDetailScreen({
 
           {/* Flexibility indicator */}
           {meal.isFlexible && (
-            <Card className="mb-6 border-clay-lavender bg-clay-mint">
-              <p className="text-xs text-clay-textDim font-body italic">
+            <Card className="mb-6 bg-blue-50 border border-blue-200 shadow-sm">
+              <p className="text-xs text-blue-700 font-body italic">
                 {t('nutrition.suggestions.flexibleNote')}
               </p>
             </Card>
           )}
 
           {/* Save Meal Section */}
-          <Card className="mb-6">
-            <p className="text-sm font-semibold text-clay-text mb-4 font-body">
+          <Card className="mb-6 bg-white shadow-sm border-0">
+            <p className="text-base font-semibold text-gray-900 mb-5 font-body">
               {t('nutrition.detail.saveAsEaten')}
             </p>
 
             {/* Meal Type Selection */}
-            <div className="mb-4">
-              <label className="block mb-2 text-xs font-semibold text-clay-textDim font-body">
+            <div className="mb-5">
+              <label className="block mb-3 text-sm font-semibold text-gray-700 font-body">
                 {t('nutrition.detail.mealType')}
               </label>
               <div className="grid grid-cols-4 gap-2">
-                {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((mealType) => (
+                {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(mealType => (
                   <button
                     key={mealType}
                     onClick={() => setSelectedMealType(mealType)}
                     className={`
                       touch-target
-                      p-2
-                      rounded-[12px]
+                      p-3
+                      rounded-xl
                       font-body
                       text-xs
+                      font-medium
                       transition-all
-                      ${selectedMealType === mealType
-                        ? 'bg-clay-primary text-white shadow-clay-extrude'
-                        : 'bg-white text-clay-text border-2 border-clay-lavender hover:bg-clay-mint'}
+                      duration-200
+                      ${
+                        selectedMealType === mealType
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:border-blue-300'
+                      }
                     `}
                   >
                     {t(`nutrition.record.mealType.${mealType}`)}
@@ -302,24 +310,28 @@ export default function MealDetailScreen({
 
             {/* Reflection Selection */}
             <div>
-              <label className="block mb-2 text-xs font-semibold text-clay-textDim font-body">
+              <label className="block mb-3 text-sm font-semibold text-gray-700 font-body">
                 {t('nutrition.detail.reflection')}
               </label>
               <div className="grid grid-cols-3 gap-2">
-                {(['light', 'normal', 'indulgent'] as FoodReflectionType[]).map((reflection) => (
+                {(['light', 'normal', 'indulgent'] as FoodReflectionType[]).map(reflection => (
                   <button
                     key={reflection}
                     onClick={() => setSelectedReflection(reflection)}
                     className={`
                       touch-target
                       p-3
-                      rounded-[12px]
+                      rounded-xl
                       font-body
                       text-xs
+                      font-medium
                       transition-all
-                      ${selectedReflection === reflection
-                        ? 'bg-clay-primary text-white shadow-clay-extrude'
-                        : 'bg-white text-clay-text border-2 border-clay-lavender hover:bg-clay-mint'}
+                      duration-200
+                      ${
+                        selectedReflection === reflection
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:border-blue-300'
+                      }
                     `}
                   >
                     {t(`nutrition.record.${reflection}`)}
@@ -330,15 +342,15 @@ export default function MealDetailScreen({
 
             {/* Error message */}
             {saveError && (
-              <div className="mt-4 p-3 rounded-[12px] bg-red-50 border-2 border-red-200">
-                <p className="text-xs text-red-800 font-body">{saveError}</p>
+              <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200">
+                <p className="text-sm text-red-700 font-body">{saveError}</p>
               </div>
             )}
 
             {/* Success message */}
             {saveSuccess && (
-              <div className="mt-4 p-3 rounded-[12px] bg-green-50 border-2 border-green-200">
-                <p className="text-xs text-green-800 font-body">
+              <div className="mt-4 p-3 rounded-xl bg-green-50 border border-green-200">
+                <p className="text-sm text-green-700 font-body">
                   {t('nutrition.detail.saveSuccess')}
                 </p>
               </div>
@@ -347,19 +359,21 @@ export default function MealDetailScreen({
         </div>
 
         {/* Footer with save and close buttons */}
-        <div className="px-6 py-4 border-t border-clay-lavender bg-white space-y-3">
+        <div className="px-6 py-5 border-t border-gray-200 bg-white space-y-3">
           <Button
             variant="primary"
             fullWidth
             onClick={handleSaveMeal}
             disabled={saving || saveSuccess}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {saving ? t('nutrition.detail.saving') : t('nutrition.detail.saveAsEatenButton')}
           </Button>
           <Button
-            variant="secondary"
+            variant="outline"
             fullWidth
             onClick={onClose}
+            className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
           >
             {t('common.close')}
           </Button>

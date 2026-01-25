@@ -13,8 +13,9 @@ export default function FoodReflectionScreen() {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const isOffline = useOffline();
-  const { reflection, loading, analyzeReflection, saveReflection, getReflectionForDateAndMeal } = useFoodReflection();
-  
+  const { reflection, loading, analyzeReflection, saveReflection, getReflectionForDateAndMeal } =
+    useFoodReflection();
+
   // Get mealType from URL params or default to current meal based on time
   const getDefaultMealType = (): MealType => {
     const hour = new Date().getHours();
@@ -23,11 +24,11 @@ export default function FoodReflectionScreen() {
     if (hour >= 14 && hour < 20) return 'dinner';
     return 'snack';
   };
-  
+
   const [selectedMealType, setSelectedMealType] = useState<MealType>(
     (searchParams.get('mealType') as MealType) || getDefaultMealType()
   );
-  const [selectedDate, setSelectedDate] = useState<string>(
+  const [selectedDate] = useState<string>(
     searchParams.get('date') || new Date().toISOString().split('T')[0]
   );
   const [selectedType, setSelectedType] = useState<FoodReflectionType | null>(null);
@@ -37,7 +38,7 @@ export default function FoodReflectionScreen() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [localAiAnalysis, setLocalAiAnalysis] = useState<FoodReflectionAnalysis | null>(null);
-  
+
   // Load reflection for selected date and meal type
   useEffect(() => {
     const loadReflection = async () => {
@@ -62,9 +63,7 @@ export default function FoodReflectionScreen() {
         console.error('Failed to load reflection:', err);
       }
     };
-    if (getReflectionForDateAndMeal) {
-      loadReflection();
-    }
+    loadReflection();
   }, [selectedDate, selectedMealType, getReflectionForDateAndMeal]);
 
   const handleAnalyze = async () => {
@@ -96,8 +95,21 @@ export default function FoodReflectionScreen() {
     try {
       setSaving(true);
       setError(null);
-      await saveReflection(selectedType, selectedMealType, notes || null, localAiAnalysis, selectedDate);
+      await saveReflection(
+        selectedType,
+        selectedMealType,
+        notes || null,
+        localAiAnalysis,
+        selectedDate
+      );
       setSaved(true);
+
+      // Trigger custom event to notify calendar components to refresh
+      window.dispatchEvent(
+        new CustomEvent('foodReflectionSaved', {
+          detail: { date: selectedDate, mealType: selectedMealType },
+        })
+      );
     } catch (err: any) {
       setError(err.message || t('nutrition.record.failedToSave'));
     } finally {
@@ -107,307 +119,328 @@ export default function FoodReflectionScreen() {
 
   if (loading) {
     return (
-      <div className="p-6 min-h-screen bg-clay-bg">
-        <p className="text-clay-textDim font-body">{t('common.loading')}</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <p className="text-gray-600 font-body">{t('common.loading')}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 min-h-screen bg-clay-bg pb-20">
-      <h1 className="text-2xl font-heading text-clay-text mb-6">
-        {t('nutrition.record.title')}
-      </h1>
-
-      <p className="text-clay-textDim font-body mb-6">
-        {t('nutrition.record.description')}
-      </p>
-
-      {/* Meal type selection */}
-      <Card className="mb-6">
-        <label className="block mb-3 text-sm font-semibold text-clay-text font-body">
-          {t('nutrition.record.mealTypeLabel')}
-        </label>
-        <div className="grid grid-cols-4 gap-2">
-          {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((mealType) => (
-            <button
-              key={mealType}
-              onClick={() => {
-                setSelectedMealType(mealType);
-                setLocalAiAnalysis(null);
-                setSaved(false);
-              }}
-              className={`
-                clay-button
-                p-3
-                rounded-[18px]
-                font-body
-                text-sm
-                transition-all
-                ${selectedMealType === mealType
-                  ? 'bg-clay-primary text-white shadow-clay-extrude'
-                  : 'bg-white text-clay-text border-2 border-clay-lavender hover:bg-clay-mint'}
-              `}
-            >
-              {t(`nutrition.record.mealType.${mealType}`)}
-            </button>
-          ))}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pb-20">
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-heading text-gray-900 mb-3">
+            {t('nutrition.record.title')}
+          </h1>
+          <p className="text-gray-600 font-body text-base leading-relaxed">
+            {t('nutrition.record.description')}
+          </p>
         </div>
-      </Card>
 
-      {/* Three large reflection buttons */}
-      <div className="grid grid-cols-1 gap-4 mb-6">
-        <button
-          onClick={() => setSelectedType('light')}
-          className={`
-            clay-button clay-card
-            p-6 text-left
-            transition-all duration-200
-            min-h-[120px]
-            ${selectedType === 'light' 
-              ? 'bg-clay-mint border-4 border-clay-primary shadow-clay-extrude' 
-              : 'bg-white hover:bg-clay-mint border-2 border-clay-lavender'}
-          `}
-        >
-          <div className="flex items-center gap-4">
-            <span className="text-5xl">🌱</span>
-            <div>
-              <h3 className="text-xl font-heading text-clay-text mb-1">
-                {t('nutrition.record.light')}
-              </h3>
-              <p className="text-sm text-clay-textDim font-body">
-                {t('nutrition.record.lightDesc')}
-              </p>
-            </div>
-          </div>
-        </button>
-
-        <button
-          onClick={() => setSelectedType('normal')}
-          className={`
-            clay-button clay-card
-            p-6 text-left
-            transition-all duration-200
-            min-h-[120px]
-            ${selectedType === 'normal' 
-              ? 'bg-clay-mint border-4 border-clay-primary shadow-clay-extrude' 
-              : 'bg-white hover:bg-clay-mint border-2 border-clay-lavender'}
-          `}
-        >
-          <div className="flex items-center gap-4">
-            <span className="text-5xl">🍽️</span>
-            <div>
-              <h3 className="text-xl font-heading text-clay-text mb-1">
-                {t('nutrition.record.normal')}
-              </h3>
-              <p className="text-sm text-clay-textDim font-body">
-                {t('nutrition.record.normalDesc')}
-              </p>
-            </div>
-          </div>
-        </button>
-
-        <button
-          onClick={() => setSelectedType('indulgent')}
-          className={`
-            clay-button clay-card
-            p-6 text-left
-            transition-all duration-200
-            min-h-[120px]
-            ${selectedType === 'indulgent' 
-              ? 'bg-clay-mint border-4 border-clay-primary shadow-clay-extrude' 
-              : 'bg-white hover:bg-clay-mint border-2 border-clay-lavender'}
-          `}
-        >
-          <div className="flex items-center gap-4">
-            <span className="text-5xl">✨</span>
-            <div>
-              <h3 className="text-xl font-heading text-clay-text mb-1">
-                {t('nutrition.record.indulgent')}
-              </h3>
-              <p className="text-sm text-clay-textDim font-body">
-                {t('nutrition.record.indulgentDesc')}
-              </p>
-            </div>
-          </div>
-        </button>
-      </div>
-
-      {/* Optional notes field */}
-      <Card className="mb-6">
-        <label className="block mb-2 text-sm font-semibold text-clay-text">
-          {t('nutrition.record.notesLabel')}
-        </label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder={t('nutrition.record.notesPlaceholder')}
-          className="
-            w-full
-            p-4
-            rounded-[20px]
-            border-2 border-clay-lavender
-            bg-white
-            text-clay-text
-            font-body
-            text-base
-            focus:outline-none
-            focus:ring-2
-            focus:ring-clay-primary
-            focus:border-clay-primary
-            resize-none
-            min-h-[100px]
-          "
-          maxLength={500}
-        />
-        <p className="text-xs text-clay-textDim mt-2">
-          {notes.length}/500 {t('common.characters')}
-        </p>
-      </Card>
-
-      {/* AI Analysis Display */}
-      {localAiAnalysis && (
-        <Card className="mb-6 border-clay-primary bg-clay-mint">
-          <div className="flex items-start gap-3 mb-3">
-            <AIIndicator status="completed" />
-            <h3 className="text-lg font-heading text-clay-text">
-              {t('nutrition.record.aiAnalysis')}
-            </h3>
-          </div>
-          
-          {/* Encouragement */}
-          <div className="mb-4">
-            <p className="text-clay-text font-body font-semibold mb-2">
-              {t('nutrition.record.encouragement')}
-            </p>
-            <p className="text-clay-textDim font-body">
-              {localAiAnalysis.encouragement}
-            </p>
-          </div>
-          
-          {/* Suggestions */}
-          {localAiAnalysis.suggestions.length > 0 && (
-            <div className="mb-4">
-              <p className="text-clay-text font-body font-semibold mb-2">
-                {t('nutrition.record.suggestions')}
-              </p>
-              <ul className="list-disc list-inside space-y-1">
-                {localAiAnalysis.suggestions.map((suggestion, idx) => (
-                  <li key={idx} className="text-clay-textDim font-body text-sm">
-                    {suggestion}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          {/* Suitability */}
-          <div className="mb-4">
-            <p className="text-clay-text font-body font-semibold mb-2">
-              {t('nutrition.record.suitability')}
-            </p>
-            <p className="text-clay-textDim font-body text-sm">
-              {localAiAnalysis.suitability}
-            </p>
-          </div>
-          
-          {/* Disclaimer */}
-          <div className="mt-4 pt-4 border-t border-clay-lavender">
-            <p className="text-xs text-clay-textDim font-body italic">
-              {localAiAnalysis.disclaimer}
-            </p>
+        {/* Meal type selection */}
+        <Card className="mb-6 bg-white shadow-lg border-0">
+          <label className="block mb-4 text-base font-semibold text-gray-800 font-body">
+            {t('nutrition.record.mealTypeLabel')}
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(mealType => (
+              <button
+                key={mealType}
+                onClick={() => {
+                  setSelectedMealType(mealType);
+                  setLocalAiAnalysis(null);
+                  setSaved(false);
+                }}
+                className={`
+                  touch-target
+                  p-3
+                  rounded-xl
+                  font-body
+                  text-xs
+                  font-medium
+                  transition-all
+                  duration-200
+                  ${
+                    selectedMealType === mealType
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:border-blue-300'
+                  }
+                `}
+              >
+                {t(`nutrition.record.mealType.${mealType}`)}
+              </button>
+            ))}
           </div>
         </Card>
-      )}
-      
-      {/* AI Processing Indicator */}
-      {analyzing && (
-        <Card className="mb-6">
-          <div className="flex items-center gap-3">
-            <AIIndicator status="processing" />
-            <div>
-              <p className="font-medium text-clay-text font-body">
-                {t('nutrition.record.aiProcessing')}
-              </p>
-              <p className="text-sm text-clay-textDim font-body">
-                {t('nutrition.record.aiProcessingNote')}
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-      
-      {/* Offline warning */}
-      {isOffline && (
-        <Card className="mb-6 border-yellow-200 bg-yellow-50">
-          <p className="text-yellow-800 text-sm font-body">
-            {t('nutrition.record.offline')}
-          </p>
-        </Card>
-      )}
 
-      {/* Success message */}
-      {saved && !reflection?.aiAnalysis && (
-        <Card className="mb-6 border-green-200 bg-green-50">
-          <p className="text-green-800 font-body">
-            {t('nutrition.record.saved')}
-          </p>
-        </Card>
-      )}
-
-      {/* Error message */}
-      {error && (
-        <Card className="mb-6 border-red-200 bg-red-50">
-          <p className="text-red-800 text-sm font-body">{error}</p>
-        </Card>
-      )}
-
-      {/* Action buttons */}
-      <div className="flex flex-col gap-3">
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            fullWidth
-            onClick={() => {
-              navigate('/nutrition');
-            }}
-            disabled={false}
+        {/* Three large reflection buttons */}
+        <div className="grid grid-cols-1 gap-4 mb-6">
+          <button
+            onClick={() => setSelectedType('light')}
+            className={`
+              w-full
+              p-6
+              text-left
+              rounded-2xl
+              transition-all
+              duration-200
+              min-h-[140px]
+              ${
+                selectedType === 'light'
+                  ? 'bg-green-50 border-4 border-green-500 shadow-lg'
+                  : 'bg-white hover:bg-gray-50 border-2 border-gray-200 shadow-md hover:shadow-lg'
+              }
+            `}
           >
-            {t('common.back')}
-          </Button>
-          {!localAiAnalysis && (
+            <div className="flex items-center gap-5">
+              <span className="text-5xl">🌱</span>
+              <div>
+                <h3 className="text-xl font-heading text-gray-900 mb-2">
+                  {t('nutrition.record.light')}
+                </h3>
+                <p className="text-sm text-gray-600 font-body leading-relaxed">
+                  {t('nutrition.record.lightDesc')}
+                </p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setSelectedType('normal')}
+            className={`
+              w-full
+              p-6
+              text-left
+              rounded-2xl
+              transition-all
+              duration-200
+              min-h-[140px]
+              ${
+                selectedType === 'normal'
+                  ? 'bg-blue-50 border-4 border-blue-500 shadow-lg'
+                  : 'bg-white hover:bg-gray-50 border-2 border-gray-200 shadow-md hover:shadow-lg'
+              }
+            `}
+          >
+            <div className="flex items-center gap-5">
+              <span className="text-5xl">🍽️</span>
+              <div>
+                <h3 className="text-xl font-heading text-gray-900 mb-2">
+                  {t('nutrition.record.normal')}
+                </h3>
+                <p className="text-sm text-gray-600 font-body leading-relaxed">
+                  {t('nutrition.record.normalDesc')}
+                </p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setSelectedType('indulgent')}
+            className={`
+              w-full
+              p-6
+              text-left
+              rounded-2xl
+              transition-all
+              duration-200
+              min-h-[140px]
+              ${
+                selectedType === 'indulgent'
+                  ? 'bg-purple-50 border-4 border-purple-500 shadow-lg'
+                  : 'bg-white hover:bg-gray-50 border-2 border-gray-200 shadow-md hover:shadow-lg'
+              }
+            `}
+          >
+            <div className="flex items-center gap-5">
+              <span className="text-5xl">✨</span>
+              <div>
+                <h3 className="text-xl font-heading text-gray-900 mb-2">
+                  {t('nutrition.record.indulgent')}
+                </h3>
+                <p className="text-sm text-gray-600 font-body leading-relaxed">
+                  {t('nutrition.record.indulgentDesc')}
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Optional notes field */}
+        <Card className="mb-6 bg-white shadow-lg border-0">
+          <label className="block mb-3 text-base font-semibold text-gray-800 font-body">
+            {t('nutrition.record.notesLabel')}
+          </label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder={t('nutrition.record.notesPlaceholder')}
+            className="
+              w-full
+              p-4
+              rounded-xl
+              border border-gray-200
+              bg-gray-50
+              text-gray-900
+              font-body
+              text-base
+              focus:outline-none
+              focus:ring-2
+              focus:ring-blue-500
+              focus:border-blue-500
+              focus:bg-white
+              resize-none
+              min-h-[120px]
+              transition-all
+            "
+            maxLength={500}
+          />
+          <p className="text-xs text-gray-500 mt-2 font-body">
+            {notes.length}/500 {t('common.characters')}
+          </p>
+        </Card>
+
+        {/* AI Analysis Display */}
+        {localAiAnalysis && (
+          <Card className="mb-6 bg-blue-50 border border-blue-200 shadow-lg">
+            <div className="flex items-start gap-3 mb-4">
+              <AIIndicator status="completed" />
+              <h3 className="text-lg font-heading text-gray-900">
+                {t('nutrition.record.aiAnalysis')}
+              </h3>
+            </div>
+
+            {/* Encouragement */}
+            <div className="mb-5">
+              <p className="text-gray-900 font-body font-semibold mb-2 text-base">
+                {t('nutrition.record.encouragement')}
+              </p>
+              <p className="text-gray-700 font-body leading-relaxed">
+                {localAiAnalysis.encouragement}
+              </p>
+            </div>
+
+            {/* Suggestions */}
+            {localAiAnalysis.suggestions.length > 0 && (
+              <div className="mb-5">
+                <p className="text-gray-900 font-body font-semibold mb-3 text-base">
+                  {t('nutrition.record.suggestions')}
+                </p>
+                <ul className="list-disc list-inside space-y-2">
+                  {localAiAnalysis.suggestions.map((suggestion, idx) => (
+                    <li key={idx} className="text-gray-700 font-body text-sm leading-relaxed">
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Suitability */}
+            <div className="mb-5">
+              <p className="text-gray-900 font-body font-semibold mb-2 text-base">
+                {t('nutrition.record.suitability')}
+              </p>
+              <p className="text-gray-700 font-body text-sm leading-relaxed">
+                {localAiAnalysis.suitability}
+              </p>
+            </div>
+
+            {/* Disclaimer */}
+            <div className="mt-5 pt-4 border-t border-blue-200">
+              <p className="text-xs text-gray-600 font-body italic">{localAiAnalysis.disclaimer}</p>
+            </div>
+          </Card>
+        )}
+
+        {/* AI Processing Indicator */}
+        {analyzing && (
+          <Card className="mb-6 bg-blue-50 border border-blue-200 shadow-sm">
+            <div className="flex items-center gap-4">
+              <AIIndicator status="processing" />
+              <div>
+                <p className="font-medium text-blue-900 font-body text-base">
+                  {t('nutrition.record.aiProcessing')}
+                </p>
+                <p className="text-sm text-blue-700 font-body">
+                  {t('nutrition.record.aiProcessingNote')}
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Offline warning */}
+        {isOffline && (
+          <Card className="mb-6 bg-yellow-50 border border-yellow-200 shadow-sm">
+            <p className="text-yellow-800 text-sm font-body">{t('nutrition.record.offline')}</p>
+          </Card>
+        )}
+
+        {/* Success message */}
+        {saved && !reflection?.aiAnalysis && (
+          <Card className="mb-6 bg-green-50 border border-green-200 shadow-sm">
+            <p className="text-green-800 font-body">{t('nutrition.record.saved')}</p>
+          </Card>
+        )}
+
+        {/* Error message */}
+        {error && (
+          <Card className="mb-6 bg-red-50 border border-red-200 shadow-sm">
+            <p className="text-red-700 text-sm font-body">{error}</p>
+          </Card>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-4">
             <Button
-              variant="secondary"
+              variant="outline"
               fullWidth
-              onClick={handleAnalyze}
-              disabled={!selectedType || analyzing || isOffline}
+              onClick={() => {
+                navigate('/nutrition');
+              }}
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              {analyzing ? t('common.loading') : t('nutrition.record.aiAnalyze')}
+              {t('common.back')}
             </Button>
-          )}
+            {!localAiAnalysis && (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={handleAnalyze}
+                disabled={!selectedType || analyzing || isOffline}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {analyzing ? t('common.loading') : t('nutrition.record.aiAnalyze')}
+              </Button>
+            )}
+            {localAiAnalysis && (
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={handleSave}
+                disabled={!selectedType || saving || isOffline}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {saving ? t('common.loading') : t('common.save')}
+              </Button>
+            )}
+          </div>
           {localAiAnalysis && (
             <Button
-              variant="primary"
+              variant="outline"
               fullWidth
-              onClick={handleSave}
-              disabled={!selectedType || saving || isOffline}
+              onClick={handleAnalyze}
+              disabled={analyzing || isOffline}
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              {saving ? t('common.loading') : t('common.save')}
+              {analyzing ? t('common.loading') : t('nutrition.record.reanalyze')}
             </Button>
           )}
         </div>
-        {localAiAnalysis && (
-          <Button
-            variant="outline"
-            fullWidth
-            onClick={handleAnalyze}
-            disabled={analyzing || isOffline}
-          >
-            {analyzing ? t('common.loading') : t('nutrition.record.reanalyze')}
-          </Button>
-        )}
       </div>
     </div>
   );
 }
-

@@ -97,14 +97,15 @@ export function validateSymptomEntry(
 
   if (entry.symptoms) {
     const symptoms = entry.symptoms.trim();
-    if (symptoms.length < 3 || symptoms.length > 1000) {
-      errors.push('Symptoms must be between 3 and 1000 characters');
+    if (symptoms.length === 0) {
+      errors.push('Symptoms cannot be empty');
+    } else if (symptoms.length > 3000) {
+      errors.push('Symptoms cannot exceed 3000 characters');
     }
   }
 
-  if (entry.notes && entry.notes.length > 2000) {
-    errors.push('Notes cannot exceed 2000 characters');
-  }
+  // Notes field removed - unified into symptoms field (FR-037(2))
+  // Notes validation kept for backward compatibility but not required
 
   if (entry.loggedDate) {
     const date = new Date(entry.loggedDate);

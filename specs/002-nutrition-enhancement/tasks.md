@@ -21,6 +21,7 @@
 - **US4 (P3)**: Sugar Reduction Easter Egg - Hidden playful feature for reducing sugary drinks
 - **US5 (P2)**: Meal Detail View - Clickable meal suggestion cards open detail view with detailed preparation method, LLM-generated image, and complete meal information
 - **US6 (P2)**: Save Meal as Eaten - Users can save meal suggestions as FoodReflection records, displayed on calendar with same visual markers
+- **US7 (P2)**: Overall UI Improvements - Refactor entire nutrition module UI to match reference app aesthetics (card-based layouts, circular progress indicators, clear hierarchy, modern color schemes), prioritizing core user flows
 
 ---
 
@@ -202,7 +203,36 @@
 
 ---
 
-## Phase 9: Polish & Cross-Cutting Concerns
+## Phase 9: User Story 7 - Overall UI Improvements (Priority: P2)
+
+**Goal**: Refactor entire nutrition module UI to match reference app aesthetics (card-based layouts, circular progress indicators, clear hierarchy, modern color schemes). Prioritize core user flows (ingredient input → meal suggestions → save meal) for consistent design language and better user experience.
+
+**Independent Test**: All nutrition screens display with modern, consistent UI design matching reference app aesthetics. Core user flow (ingredient input → meal suggestions → save meal) has improved visual hierarchy and modern styling. All screens use consistent card-based layouts, color schemes, and spacing.
+
+### Implementation for User Story 7
+
+- [X] T093 [P] [US7] Refactor NutritionHomeScreen UI with card-based layout and modern color scheme in src/components/shared/Layout.tsx
+- [X] T094 [P] [US7] Refactor NutritionInputScreen UI with improved visual hierarchy and modern styling in src/components/nutrition/NutritionInputScreen.tsx
+- [X] T095 [P] [US7] Refactor MealSuggestionsScreen UI with card-based layout and improved spacing in src/components/nutrition/MealSuggestionsScreen.tsx
+- [X] T096 [P] [US7] Refactor MealDetailScreen UI with modern modal/drawer styling matching reference designs in src/components/nutrition/MealDetailScreen.tsx
+- [X] T097 [P] [US7] Refactor FoodReflectionScreen UI with improved visual hierarchy and modern styling in src/components/nutrition/FoodReflectionScreen.tsx
+- [X] T098 [P] [US7] Refactor NutritionCalendarScreen UI with improved calendar styling and visual markers in src/components/nutrition/NutritionCalendarScreen.tsx
+- [X] T099 [P] [US7] Refactor NutritionTimelineScreen UI with card-based layout and modern styling in src/components/nutrition/NutritionTimelineScreen.tsx
+- [X] T100 [P] [US7] Update color scheme across all nutrition components to match reference app aesthetics (modern blues, clean whites, subtle grays)
+- [X] T101 [P] [US7] Ensure consistent spacing and padding across all nutrition screens (reference app spacing patterns)
+- [X] T102 [P] [US7] Update typography hierarchy across all nutrition screens (font sizes, weights, line heights matching reference designs)
+- [X] T103 [P] [US7] Add circular progress indicators where appropriate (matching Macros display style from reference images)
+- [X] T104 [P] [US7] Ensure all cards use consistent rounded corners, shadows, and background colors matching reference designs
+- [X] T105 [US7] Verify core user flow (ingredient input → meal suggestions → save meal) has consistent visual design and improved UX
+- [X] T106 [US7] Test UI improvements on mobile devices to ensure touch targets and spacing work correctly
+- [X] T107 [US7] Add UI improvement translation keys if needed to src/i18n/locales/en.ts
+- [X] T108 [US7] Add UI improvement translation keys if needed to src/i18n/locales/zh.ts
+
+**Checkpoint**: At this point, User Story 7 should be complete. All nutrition screens display with modern, consistent UI design matching reference app aesthetics.
+
+---
+
+## Phase 10: Polish & Cross-Cutting Concerns
 
 **Purpose**: Improvements that affect multiple user stories
 
@@ -227,10 +257,11 @@
 
 - **Setup (Phase 1)**: No dependencies - can start immediately
 - **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
-- **User Stories (Phase 3-8)**: All depend on Foundational phase completion
+- **User Stories (Phase 3-9)**: All depend on Foundational phase completion
   - User stories can then proceed in parallel (if staffed)
   - Or sequentially in priority order (P1 → P2 → P3)
-- **Polish (Phase 9)**: Depends on all desired user stories being complete
+  - US7 (UI improvements) recommended after core stories (US1-US6) for better visual consistency
+- **Polish (Phase 10)**: Depends on all desired user stories being complete
 
 ### User Story Dependencies
 
@@ -240,6 +271,7 @@
 - **User Story 4 (P3)**: Can start after Foundational (Phase 2) - Completely independent hidden feature
 - **User Story 5 (P2)**: Can start after Foundational (Phase 2) - Enhances meal suggestions (US2), should work independently
 - **User Story 6 (P2)**: Can start after Foundational (Phase 2) - Enhances meal detail view (US5), requires FoodReflection infrastructure (US1)
+- **User Story 7 (P2)**: Can start after core user stories (US1-US6) - UI improvements across entire nutrition module, should work independently but enhances all previous stories
 
 ### Within Each User Story
 
@@ -320,7 +352,7 @@ With multiple developers:
 
 ## Task Summary
 
-- **Total Tasks**: 92 (updated: added US6 for save meal as eaten)
+- **Total Tasks**: 108 (updated: added US6 for save meal as eaten, US7 for overall UI improvements)
 - **Setup Phase**: 8 tasks
 - **Foundational Phase**: 13 tasks
 - **User Story 1 (P1)**: 7 tasks
@@ -329,6 +361,7 @@ With multiple developers:
 - **User Story 4 (P3)**: 9 tasks
 - **User Story 5 (P2)**: 13 tasks (meal detail view with images)
 - **User Story 6 (P2)**: 12 tasks (save meal as eaten)
+- **User Story 7 (P2)**: 16 tasks (overall UI improvements)
 - **Polish Phase**: 12 tasks
 
 ### Suggested MVP Scope
@@ -349,6 +382,7 @@ With multiple developers:
 - **US4**: Hidden easter egg discoverable via long-press, cup pouring works, 5 small = 1 large
 - **US5**: Meal suggestion cards are clickable, detail view opens as modal/drawer with detailed preparation method (step-by-step), LLM-generated image, and complete information
 - **US6**: Users can save meal suggestions as FoodReflection records from detail view, saved meals appear on calendar with visual markers, auto-infer mealType and reflection with user modification option
+- **US7**: All nutrition screens display with modern, consistent UI design matching reference app aesthetics (card-based layouts, circular progress indicators, clear hierarchy, modern color schemes)
 
 ---
 
@@ -370,8 +404,8 @@ With multiple developers:
 ## Format Validation
 
 ✅ All tasks follow checklist format: `- [ ] [TaskID] [P?] [Story?] Description with file path`
-✅ All tasks have sequential IDs (T001-T092 for all tasks)
-✅ All user story tasks have [Story] labels ([US1], [US2], [US3], [US4], [US5], [US6])
+✅ All tasks have sequential IDs (T001-T108 for all tasks)
+✅ All user story tasks have [Story] labels ([US1], [US2], [US3], [US4], [US5], [US6], [US7])
 ✅ All parallelizable tasks marked with [P]
 ✅ All tasks include exact file paths
 ✅ Tasks organized by user story for independent implementation

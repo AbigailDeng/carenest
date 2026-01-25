@@ -2,7 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useOffline } from '../../hooks/useOffline';
-import { generateMealSuggestions, generateMealDetail, MealSuggestionInput, MealSuggestionOptions } from '../../services/llmService';
+import {
+  generateMealSuggestions,
+  generateMealDetail,
+  MealSuggestionInput,
+  MealSuggestionOptions,
+} from '../../services/llmService';
 import { MealSuggestion } from '../../types';
 import Card from '../shared/Card';
 import Button from '../shared/Button';
@@ -15,24 +20,24 @@ export default function MealSuggestionsScreen() {
   const location = useLocation();
   const { t } = useTranslation();
   const isOffline = useOffline();
-  
+
   // Get ingredients from location state (passed from input screen)
   const ingredients = (location.state as any)?.ingredients || ''; // Now a string, not array
   const healthConditions = (location.state as any)?.healthConditions || [];
   const energyLevel = (location.state as any)?.energyLevel || null;
-  
+
   const [suggestions, setSuggestions] = useState<MealSuggestion[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeAware, setTimeAware] = useState(false);
-  
+
   // Detail view state
   const [selectedMeal, setSelectedMeal] = useState<MealSuggestion | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailedPreparationMethod, setDetailedPreparationMethod] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  
+
   // Detect late night (after 9 PM)
   useEffect(() => {
     const hour = new Date().getHours();
@@ -40,7 +45,7 @@ export default function MealSuggestionsScreen() {
       setTimeAware(true);
     }
   }, []);
-  
+
   // Generate suggestions on mount if ingredients are available
   useEffect(() => {
     const trimmedIngredients = typeof ingredients === 'string' ? ingredients.trim() : '';
@@ -52,41 +57,41 @@ export default function MealSuggestionsScreen() {
       setError(t('nutrition.suggestions.offline'));
     }
   }, []);
-  
+
   const handleGenerateSuggestions = async () => {
     const trimmedIngredients = typeof ingredients === 'string' ? ingredients.trim() : '';
     if (trimmedIngredients.length === 0) {
       setError(t('nutrition.suggestions.noIngredients'));
       return;
     }
-    
+
     if (isOffline) {
       setError(t('nutrition.suggestions.offline'));
       return;
     }
-    
+
     try {
       setGenerating(true);
       setError(null);
       // Clear previous suggestions when regenerating
       setSuggestions([]);
-      
+
       const input: MealSuggestionInput = {
         ingredients: typeof ingredients === 'string' ? ingredients.trim() : '',
         healthConditions: healthConditions.length > 0 ? healthConditions : undefined,
         energyLevel: energyLevel || undefined,
       };
-      
+
       const options: MealSuggestionOptions = {
         timeAware: true, // Enable time-aware suggestions
         flexible: true, // Ingredients are optional
         maxSuggestions: 3, // Request exactly 3 suggestions
       };
-      
+
       const results = await generateMealSuggestions(input, options);
-      
+
       // Convert to MealSuggestion format with timeAwareGuidance
-      const mealSuggestions: MealSuggestion[] = results.map((result, index) => ({
+      const mealSuggestions: MealSuggestion[] = results.map(result => ({
         id: crypto.randomUUID(),
         mealName: result.mealName,
         description: result.description,
@@ -99,10 +104,12 @@ export default function MealSuggestionsScreen() {
         isFavorite: false,
         timeAwareGuidance: result.timeAwareGuidance || null,
         isFlexible: result.isFlexible ?? true,
+        detailedPreparationMethod: null,
+        imageUrl: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }));
-      
+
       setSuggestions(mealSuggestions);
     } catch (err: any) {
       setError(err.message || t('nutrition.suggestions.failedToGenerate'));
@@ -110,7 +117,7 @@ export default function MealSuggestionsScreen() {
       setGenerating(false);
     }
   };
-  
+
   // Handle meal card click - open detail view
   const handleMealClick = async (meal: MealSuggestion) => {
     setSelectedMeal(meal);
@@ -118,7 +125,7 @@ export default function MealSuggestionsScreen() {
     setLoadingDetail(true);
     setDetailedPreparationMethod(null);
     setImageUrl(null);
-    
+
     try {
       // Generate detailed preparation method and image on-demand
       const detail = await generateMealDetail({
@@ -127,7 +134,7 @@ export default function MealSuggestionsScreen() {
         ingredients: meal.ingredients,
         preparationNotes: meal.preparationNotes,
       });
-      
+
       setDetailedPreparationMethod(detail.detailedPreparationMethod);
       setImageUrl(detail.imageUrl);
     } catch (err: any) {
@@ -139,7 +146,7 @@ export default function MealSuggestionsScreen() {
       setLoadingDetail(false);
     }
   };
-  
+
   // Close detail view
   const handleCloseDetail = () => {
     setDetailOpen(false);
@@ -148,164 +155,170 @@ export default function MealSuggestionsScreen() {
     setImageUrl(null);
     setLoadingDetail(false);
   };
-  
+
   return (
-    <div className="p-6 min-h-screen bg-clay-bg pb-20">
-      <h1 className="text-2xl font-heading text-clay-text mb-6">
-        {t('nutrition.suggestions.title')}
-      </h1>
-      
-      {/* Time-aware messaging */}
-      {timeAware && (
-        <Card className="mb-6 border-purple-200 bg-purple-50">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">🌙</span>
-            <div>
-              <p className="font-semibold text-purple-900 mb-1 font-body">
-                {t('nutrition.timeAware.title')}
-              </p>
-              <p className="text-sm text-purple-800 font-body">
-                {t('nutrition.timeAware.message')}
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-      
-      {/* Ingredients used */}
-      {typeof ingredients === 'string' && ingredients.trim().length > 0 && (
-        <Card className="mb-6">
-          <p className="text-sm text-clay-textDim font-body mb-2">
-            {t('nutrition.suggestions.ingredientsUsed')}
-          </p>
-          <p className="text-clay-text font-body">
-            {ingredients.trim()}
-          </p>
-          {timeAware && (
-            <p className="text-xs text-clay-textDim mt-2 font-body italic">
-              {t('nutrition.suggestions.ingredientsFlexible')}
-            </p>
-          )}
-        </Card>
-      )}
-      
-      {/* Generating indicator */}
-      {generating && (
-        <Card className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-clay-text mb-1 font-body">
-                {t('nutrition.suggestions.generating')}
-              </p>
-              <p className="text-sm text-clay-textDim font-body">
-                {t('nutrition.suggestions.generatingNote')}
-              </p>
-            </div>
-            <AIIndicator status="processing" />
-          </div>
-        </Card>
-      )}
-      
-      {/* Error message */}
-      {error && (
-        <Card className="mb-6 border-red-200 bg-red-50">
-          <p className="text-red-800 text-sm font-body">{error}</p>
-        </Card>
-      )}
-      
-      {/* Meal suggestions */}
-      {suggestions.length > 0 && (
-        <div className="space-y-4 mb-6">
-          {suggestions.map((suggestion) => (
-            <Card 
-              key={suggestion.id} 
-              className="border-clay-lavender cursor-pointer transition-all hover:shadow-clay-extrude active:opacity-80"
-              onClick={() => handleMealClick(suggestion)}
-            >
-              <h3 className="text-lg font-heading text-clay-text mb-2">
-                {suggestion.mealName}
-              </h3>
-              <p className="text-clay-textDim font-body mb-3">
-                {suggestion.description}
-              </p>
-              
-              {suggestion.ingredients.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-sm font-semibold text-clay-text mb-1 font-body">
-                    {t('nutrition.suggestions.ingredients')}:
-                  </p>
-                  <ul className="list-disc list-inside text-sm text-clay-textDim font-body">
-                    {suggestion.ingredients.map((ing, idx) => (
-                      <li key={idx}>{ing}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {suggestion.preparationNotes && (
-                <div className="mb-3">
-                  <p className="text-sm font-semibold text-clay-text mb-1 font-body">
-                    {t('nutrition.suggestions.preparation')}:
-                  </p>
-                  <p className="text-sm text-clay-textDim font-body">
-                    {suggestion.preparationNotes}
-                  </p>
-                </div>
-              )}
-              
-              {/* Time-aware guidance */}
-              {suggestion.timeAwareGuidance && (
-                <Card className="mt-3 border-purple-100 bg-purple-50">
-                  <p className="text-sm text-purple-800 font-body italic">
-                    {suggestion.timeAwareGuidance}
-                  </p>
-                </Card>
-              )}
-              
-              {/* Flexibility indicator */}
-              {suggestion.isFlexible && (
-                <p className="text-xs text-clay-textDim mt-2 font-body italic">
-                  {t('nutrition.suggestions.flexibleNote')}
-                </p>
-              )}
-            </Card>
-          ))}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pb-20">
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-heading text-gray-900 mb-3">
+            {t('nutrition.suggestions.title')}
+          </h1>
         </div>
-      )}
-      
-      {/* Empty state */}
-      {!generating && suggestions.length === 0 && !error && (
-        <Card className="mb-6">
-          <p className="text-clay-textDim font-body text-center py-8">
-            {t('nutrition.suggestions.noSuggestions')}
-          </p>
-        </Card>
-      )}
-      
-      <Disclaimer type="nutrition" className="mb-6" />
-      
-      {/* Action buttons */}
-      <div className="flex gap-3">
-        <Button
-          variant="outline"
-          fullWidth
-          onClick={() => navigate('/nutrition')}
-          disabled={generating}
-        >
-          {t('common.back')}
-        </Button>
-        {typeof ingredients === 'string' && ingredients.trim().length > 0 && !isOffline && (
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={handleGenerateSuggestions}
-            disabled={generating}
-          >
-            {generating ? t('common.loading') : t('nutrition.suggestions.regenerate')}
-          </Button>
+
+        {/* Time-aware messaging */}
+        {timeAware && (
+          <Card className="mb-6 bg-indigo-50 border border-indigo-200 shadow-sm">
+            <div className="flex items-start gap-4">
+              <span className="text-3xl">🌙</span>
+              <div>
+                <p className="font-semibold text-indigo-900 mb-2 font-body text-base">
+                  {t('nutrition.timeAware.title')}
+                </p>
+                <p className="text-sm text-indigo-800 font-body leading-relaxed">
+                  {t('nutrition.timeAware.message')}
+                </p>
+              </div>
+            </div>
+          </Card>
         )}
+
+        {/* Ingredients used */}
+        {typeof ingredients === 'string' && ingredients.trim().length > 0 && (
+          <Card className="mb-6 bg-white shadow-lg border-0">
+            <p className="text-sm font-semibold text-gray-600 font-body mb-2 uppercase tracking-wide">
+              {t('nutrition.suggestions.ingredientsUsed')}
+            </p>
+            <p className="text-gray-900 font-body text-base">{ingredients.trim()}</p>
+            {timeAware && (
+              <p className="text-xs text-gray-500 mt-3 font-body italic">
+                {t('nutrition.suggestions.ingredientsFlexible')}
+              </p>
+            )}
+          </Card>
+        )}
+
+        {/* Generating indicator */}
+        {generating && (
+          <Card className="mb-6 bg-white shadow-lg border-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-gray-900 mb-1 font-body text-base">
+                  {t('nutrition.suggestions.generating')}
+                </p>
+                <p className="text-sm text-gray-600 font-body">
+                  {t('nutrition.suggestions.generatingNote')}
+                </p>
+              </div>
+              <AIIndicator status="processing" />
+            </div>
+          </Card>
+        )}
+
+        {/* Error message */}
+        {error && (
+          <Card className="mb-6 bg-red-50 border border-red-200 shadow-sm">
+            <p className="text-red-700 text-sm font-body">{error}</p>
+          </Card>
+        )}
+
+        {/* Meal suggestions */}
+        {suggestions.length > 0 && (
+          <div className="space-y-5 mb-6">
+            {suggestions.map(suggestion => (
+              <button
+                key={suggestion.id}
+                type="button"
+                className="w-full text-left"
+                onClick={() => handleMealClick(suggestion)}
+              >
+                <Card className="bg-white shadow-lg border-0 cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.98]">
+                  <h3 className="text-xl font-heading text-gray-900 mb-3">{suggestion.mealName}</h3>
+                  <p className="text-gray-600 font-body mb-4 leading-relaxed">
+                    {suggestion.description}
+                  </p>
+
+                  {suggestion.ingredients.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm font-semibold text-gray-700 mb-2 font-body">
+                        {t('nutrition.suggestions.ingredients')}:
+                      </p>
+                      <ul className="list-disc list-inside text-sm text-gray-600 font-body space-y-1">
+                        {suggestion.ingredients.map((ing, idx) => (
+                          <li key={idx}>{ing}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {suggestion.preparationNotes && (
+                    <div className="mb-4">
+                      <p className="text-sm font-semibold text-gray-700 mb-2 font-body">
+                        {t('nutrition.suggestions.preparation')}:
+                      </p>
+                      <p className="text-sm text-gray-600 font-body leading-relaxed">
+                        {suggestion.preparationNotes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Time-aware guidance */}
+                  {suggestion.timeAwareGuidance && (
+                    <div className="mt-4 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                      <p className="text-sm text-indigo-800 font-body italic">
+                        {suggestion.timeAwareGuidance}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Flexibility indicator */}
+                  {suggestion.isFlexible && (
+                    <p className="text-xs text-gray-500 mt-4 font-body italic">
+                      {t('nutrition.suggestions.flexibleNote')}
+                    </p>
+                  )}
+                </Card>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!generating && suggestions.length === 0 && !error && (
+          <Card className="mb-6 bg-white shadow-lg border-0">
+            <p className="text-gray-500 font-body text-center py-12">
+              {t('nutrition.suggestions.noSuggestions')}
+            </p>
+          </Card>
+        )}
+
+        <Disclaimer type="ai" className="mb-6" />
+
+        {/* Action buttons */}
+        <div className="flex gap-4">
+          <Button
+            variant="outline"
+            fullWidth
+            onClick={() => navigate('/nutrition')}
+            disabled={generating}
+            className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            {t('common.back')}
+          </Button>
+          {typeof ingredients === 'string' && ingredients.trim().length > 0 && !isOffline && (
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={handleGenerateSuggestions}
+              disabled={generating}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {generating ? t('common.loading') : t('nutrition.suggestions.regenerate')}
+            </Button>
+          )}
+        </div>
       </div>
-      
+
       {/* Meal Detail Screen */}
       <MealDetailScreen
         meal={selectedMeal}
@@ -318,4 +331,3 @@ export default function MealSuggestionsScreen() {
     </div>
   );
 }
-

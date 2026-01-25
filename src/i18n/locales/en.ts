@@ -21,17 +21,24 @@ export const en = {
   },
   home: {
     title: 'Wellmate',
-    subtitle: 'Your personal health companion. Track your health, get nutrition guidance, and find emotional support.',
+    subtitle:
+      'Your personal health companion. Track your health, get nutrition guidance, and find emotional support.',
     healthTracking: 'Health Tracking',
     nutritionCompanion: 'Nutrition Companion',
     emotionalSupport: 'Emotional Support',
     privacyData: 'Privacy & Data',
+    healthDescription: 'Track your health and symptoms',
+    nutritionDescription: 'Manage your daily nutrition',
+    emotionalDescription: 'Express your emotions',
+    tapCharacter: 'Tap the character to begin',
   },
   health: {
     title: 'Health Tracking',
     uploadRecord: 'Upload Medical Record',
     logSymptoms: 'Log Symptoms',
     viewTimeline: 'View Timeline',
+    companionPrompt: "Record here, I'll help you keep track.",
+    ledgerPrompt: "I've organized these records for you. Which part would you like to check first?",
     backToHealth: 'Back to Health',
     loadingTimeline: 'Loading timeline...',
     recordNotFound: 'Medical record not found.',
@@ -59,7 +66,7 @@ export const en = {
       summary: 'Summary',
       relatedConditions: 'Related Health Conditions',
       viewLifestyle: 'View Lifestyle Suggestions',
-      pending: 'This record is queued for AI processing. It will be processed when you\'re online.',
+      pending: "This record is queued for AI processing. It will be processed when you're online.",
       processing: 'Processing with AI...',
       failed: 'Processing failed',
     },
@@ -81,7 +88,8 @@ export const en = {
       entryNotFound: 'Symptom entry not found.',
       analysisTitle: 'Symptom Analysis',
       yourSymptoms: 'Your Symptoms',
-      pendingAnalysis: 'This entry is queued for AI analysis. It will be processed when you\'re online.',
+      pendingAnalysis:
+        "This entry is queued for AI analysis. It will be processed when you're online.",
       analysisFailed: 'Analysis failed',
       observations: 'Observations',
       possibleCauses: 'Possible Contributing Factors',
@@ -89,6 +97,12 @@ export const en = {
       whenToSeekHelp: 'When to Seek Professional Help',
       aiDiagnosis: 'AI Diagnosis',
       aiAnalysisReady: 'AI Analysis Ready',
+      symptomPrompt: "What's bothering you? Don't hide it from me.",
+      freeDescriptionLabel: 'Free Description',
+      freeDescriptionPlaceholder: 'Describe your symptoms freely...',
+      uploadMedicalRecord: 'Upload Medical Record/Prescription',
+      letHimLook: 'Let him take a look',
+      rememberedInHeart: 'He has remembered your situation in his heart.',
     },
     timeline: {
       title: 'Health Timeline',
@@ -120,12 +134,14 @@ export const en = {
   privacy: {
     title: 'Privacy Settings',
     dataStorage: 'Data Storage',
-    dataStorageDesc: 'All your health data is stored locally on your device using IndexedDB. No data is sent to external servers unless you explicitly consent to AI processing.',
+    dataStorageDesc:
+      'All your health data is stored locally on your device using IndexedDB. No data is sent to external servers unless you explicitly consent to AI processing.',
     storedLocally: 'Data stored locally on your device',
     noAutoTransmission: 'No automatic data transmission',
     fullControl: 'Full control over your data',
     aiConsent: 'AI Processing',
-    aiConsentDesc: 'AI processing is automatically enabled when you upload files or use AI features. You can disable it here if you prefer to store data locally only. This requires an internet connection.',
+    aiConsentDesc:
+      'AI processing is automatically enabled when you upload files or use AI features. You can disable it here if you prefer to store data locally only. This requires an internet connection.',
     enableAI: 'Enable AI Processing',
     consentGiven: 'Consent given',
     consentNotGiven: 'Consent not given',
@@ -195,7 +211,8 @@ export const en = {
     message: "You're offline. Some features may be limited.",
   },
   disclaimer: {
-    medical: 'This information is for general guidance only and is not a substitute for professional medical advice, diagnosis, or treatment.',
+    medical:
+      'This information is for general guidance only and is not a substitute for professional medical advice, diagnosis, or treatment.',
     ai: 'This content is AI-generated and should be used for general guidance only. It is not a substitute for professional advice.',
     general: 'This information is provided for general guidance only.',
     note: 'Note:',
@@ -212,9 +229,11 @@ export const en = {
     severe: 'Severe',
   },
   tabs: {
+    home: 'Home',
     health: 'Health',
     nutrition: 'Nutrition',
     emotional: 'Emotional',
+    companion: 'Companion',
   },
   settings: {
     title: 'Settings',
@@ -226,7 +245,8 @@ export const en = {
   nutrition: {
     record: {
       title: 'Daily Food Record',
-      description: 'Record how you ate today. AI will provide encouragement and suggestions based on your health.',
+      description:
+        'Record how you ate today. AI will provide encouragement and suggestions based on your health.',
       mealTypeLabel: 'Meal Type',
       mealType: {
         breakfast: 'Breakfast',
@@ -255,7 +275,8 @@ export const en = {
       aiAnalyze: 'AI Analyze',
       reanalyze: 'Re-analyze',
       failedToAnalyze: 'Failed to analyze',
-      offline: 'You\'re offline. AI analysis requires an internet connection. Record will be saved locally.',
+      offline:
+        "You're offline. AI analysis requires an internet connection. Record will be saved locally.",
     },
     calendar: {
       title: 'Nutrition Calendar',
@@ -287,7 +308,7 @@ export const en = {
       generating: 'Generating suggestions...',
       generatingNote: 'This may take a few moments',
       noIngredients: 'No ingredients provided',
-      offline: 'You\'re offline. AI suggestions require an internet connection.',
+      offline: "You're offline. AI suggestions require an internet connection.",
       failedToGenerate: 'Failed to generate suggestions',
       noSuggestions: 'No suggestions available',
       regenerate: 'Regenerate',
@@ -312,17 +333,20 @@ export const en = {
     },
     timeAware: {
       title: 'Late Night',
-      message: 'It\'s late - here are some gentle suggestions for you. Remember, eating when you need to is part of self-care.',
+      message:
+        "It's late - here are some gentle suggestions for you. Remember, eating when you need to is part of self-care.",
     },
     input: {
       title: 'Ingredient Input',
       description: 'What ingredients do you have? (Optional - suggestions can use some or all)',
       ingredientsLabel: 'Ingredients',
-      ingredientPlaceholder: 'Enter your ingredients (e.g., tomato, pasta, cheese or chicken rice)...',
+      ingredientPlaceholder:
+        'Enter your ingredients (e.g., tomato, pasta, cheese or chicken rice)...',
       add: 'Add',
       removeIngredient: 'Remove ingredient',
       addedIngredients: 'Added ingredients',
-      flexibilityNote: 'Remember: Ingredients are suggestions, not requirements. Meal ideas can use some or all of them.',
+      flexibilityNote:
+        'Remember: Ingredients are suggestions, not requirements. Meal ideas can use some or all of them.',
       energyLevelLabel: 'Energy Level',
       optional: 'Optional',
       energyLevel: {
@@ -351,5 +375,17 @@ export const en = {
       confirmReset: 'Are you sure you want to reset all cups?',
     },
   },
+  companion: {
+    title: 'Companion',
+    send: 'Send',
+    typeMessage: 'Type a message...',
+    generating: 'Generating response...',
+    generatingNote: 'Please wait while I think...',
+    offline: 'You are offline. Using template responses.',
+    noMessages: 'Start a conversation with your companion',
+    error: 'Failed to send message',
+    close: 'Close',
+    contactByPhone: 'Contact by phone',
+    chatFreely: 'Chat freely, sweet and warm',
+  },
 };
-

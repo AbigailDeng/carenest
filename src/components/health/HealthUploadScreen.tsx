@@ -19,13 +19,19 @@ export default function HealthUploadScreen() {
   const isOffline = useOffline();
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [ocrProcessing, setOcrProcessing] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [uploadResult, setUploadResult] = useState<{ content: string; fileType: string; filename: string; arrayBuffer: ArrayBuffer; fileSize: number } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{
+    content: string;
+    fileType: string;
+    filename: string;
+    arrayBuffer: ArrayBuffer;
+    fileSize: number;
+  } | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,17 +52,20 @@ export default function HealthUploadScreen() {
 
     try {
       // Upload and extract content (with OCR progress tracking for images)
-      const uploadResult = await uploadFile(file, (progress) => {
-        if (progress.status === 'recognizing text' || progress.status === 'loading tesseract core') {
+      const uploadResult = await uploadFile(file, progress => {
+        if (
+          progress.status === 'recognizing text' ||
+          progress.status === 'loading tesseract core'
+        ) {
           setOcrProcessing(true);
           setOcrProgress(progress.progress);
         }
       });
-      
+
       // OCR processing complete
       setOcrProcessing(false);
       setUploading(false);
-      
+
       // Store upload result for preview and save
       setUploadResult({
         content: uploadResult.content,
@@ -90,18 +99,25 @@ export default function HealthUploadScreen() {
 
           // Ensure we have proper structure - extract fields correctly
           console.log('Summary received:', summary);
-          
+
           // Handle case where summary might be a string (raw response) or object
-          let parsedSummary = summary;
+          let parsedSummary: any = summary;
           if (typeof summary === 'string') {
             try {
               parsedSummary = JSON.parse(summary);
             } catch {
               // If parsing fails, treat as observations only
-              parsedSummary = { observations: summary };
+              parsedSummary = {
+                observations: summary,
+                possibleCauses: [],
+                suggestions: [],
+                whenToSeekHelp: '',
+                disclaimer: '',
+                processingTimestamp: new Date().toISOString(),
+              };
             }
           }
-          
+
           // Validate and set AI analysis with proper structure
           // Ensure each field is properly extracted
           const analysisData: {
@@ -111,8 +127,8 @@ export default function HealthUploadScreen() {
             whenToSeekHelp: string;
             disclaimer: string;
           } = {
-            observations: (parsedSummary.observations || parsedSummary.plainLanguageSummary || '').toString(),
-            possibleCauses: Array.isArray(parsedSummary.possibleCauses) 
+            observations: (parsedSummary.observations || '').toString(),
+            possibleCauses: Array.isArray(parsedSummary.possibleCauses)
               ? parsedSummary.possibleCauses.map((c: any) => String(c))
               : [],
             suggestions: Array.isArray(parsedSummary.suggestions)
@@ -121,7 +137,7 @@ export default function HealthUploadScreen() {
             whenToSeekHelp: (parsedSummary.whenToSeekHelp || '').toString(),
             disclaimer: (parsedSummary.disclaimer || '').toString(),
           };
-          
+
           console.log('Setting AI analysis:', analysisData);
           setAiAnalysis(analysisData);
           setProcessing(false);
@@ -146,7 +162,7 @@ export default function HealthUploadScreen() {
 
     try {
       setError(null);
-      
+
       // Create medical record
       const now = new Date().toISOString();
       const record = await addRecord({
@@ -156,13 +172,15 @@ export default function HealthUploadScreen() {
         fileContent: uploadResult.arrayBuffer,
         fileSize: uploadResult.fileSize,
         aiSummary: aiAnalysis ? aiAnalysis.observations : null,
-        aiAnalysis: aiAnalysis ? {
-          observations: aiAnalysis.observations,
-          possibleCauses: aiAnalysis.possibleCauses,
-          suggestions: aiAnalysis.suggestions,
-          whenToSeekHelp: aiAnalysis.whenToSeekHelp,
-          disclaimer: aiAnalysis.disclaimer,
-        } : null,
+        aiAnalysis: aiAnalysis
+          ? {
+              observations: aiAnalysis.observations,
+              possibleCauses: aiAnalysis.possibleCauses,
+              suggestions: aiAnalysis.suggestions,
+              whenToSeekHelp: aiAnalysis.whenToSeekHelp,
+              disclaimer: aiAnalysis.disclaimer,
+            }
+          : null,
         processingStatus: aiAnalysis ? 'completed' : 'pending',
         errorMessage: null,
       });
@@ -225,9 +243,7 @@ export default function HealthUploadScreen() {
               <p className="text-gray-700 font-medium mb-1">
                 {uploading ? t('health.upload.uploading') : t('health.upload.clickOrDrag')}
               </p>
-              <p className="text-sm text-gray-500">
-                {t('health.upload.supports')}
-              </p>
+              <p className="text-sm text-gray-500">{t('health.upload.supports')}</p>
             </div>
           </div>
         </div>
@@ -270,11 +286,11 @@ export default function HealthUploadScreen() {
             <Card className="mb-4">
               <div className="flex items-center gap-2 mb-3">
                 <AIIndicator status="completed" />
-                <h2 className="text-lg font-semibold text-gray-900">{t('health.symptoms.observations')}</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t('health.symptoms.observations')}
+                </h2>
               </div>
-              <p className="text-gray-700 whitespace-pre-wrap">
-                {String(aiAnalysis.observations)}
-              </p>
+              <p className="text-gray-700 whitespace-pre-wrap">{String(aiAnalysis.observations)}</p>
             </Card>
           )}
 
@@ -339,9 +355,7 @@ export default function HealthUploadScreen() {
 
       {isOffline && !uploadResult && (
         <Card className="mb-6 border-yellow-200 bg-yellow-50">
-          <p className="text-yellow-800 text-sm">
-            {t('health.upload.offline')}
-          </p>
+          <p className="text-yellow-800 text-sm">{t('health.upload.offline')}</p>
         </Card>
       )}
 
@@ -362,12 +376,7 @@ export default function HealthUploadScreen() {
           {t('common.back')}
         </Button>
         {uploadResult && (
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={handleSave}
-            disabled={processing}
-          >
+          <Button variant="primary" fullWidth onClick={handleSave} disabled={processing}>
             {t('common.save')}
           </Button>
         )}
@@ -375,4 +384,3 @@ export default function HealthUploadScreen() {
     </div>
   );
 }
-

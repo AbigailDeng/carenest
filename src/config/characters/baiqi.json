@@ -1,0 +1,153 @@
+{
+  "id": "baiqi",
+  "name": {
+    "en": "Bai Qi",
+    "zh": "白起"
+  },
+  "avatarUrl": "/assets/characters/baiqi/avatar.svg",
+  "illustrationUrls": {
+    "default": "/assets/characters/baiqi/illustrations/default.svg",
+    "happy": "/assets/characters/baiqi/illustrations/happy.svg",
+    "calm": "/assets/characters/baiqi/illustrations/calm.svg",
+    "concerned": "/assets/characters/baiqi/illustrations/concerned.svg",
+    "energetic": "/assets/characters/baiqi/illustrations/energetic.svg",
+    "tired": "/assets/characters/baiqi/illustrations/tired.svg"
+  },
+  "backgroundUrls": {
+    "morning": "/assets/characters/baiqi/backgrounds/morning.svg",
+    "afternoon": "/assets/characters/baiqi/backgrounds/afternoon.svg",
+    "evening": "/assets/characters/baiqi/backgrounds/evening.svg",
+    "night": "/assets/characters/baiqi/backgrounds/night.svg"
+  },
+  "dialogueTemplates": {
+    "greetings": {
+      "morning": [
+        "Good morning! How are you feeling today?",
+        "Morning! Ready to start the day together?",
+        "Good morning! I hope you slept well."
+      ],
+      "afternoon": [
+        "Good afternoon! How has your day been?",
+        "Afternoon! How are you doing?"
+      ],
+      "evening": [
+        "Good evening! How was your day?",
+        "Evening! Let's check in together.",
+        "Good evening! How are you feeling?"
+      ],
+      "night": [
+        "It's getting late. How are you doing?",
+        "Good night! I hope you had a good day."
+      ]
+    },
+    "responses": {
+      "sadness": [
+        "I'm here with you. Would you like to talk about what's bothering you?",
+        "I understand. Loneliness can be really hard. Let's work through this together."
+      ],
+      "stress": [
+        "I understand. Stress can be really hard. Would it help to talk about what's on your mind?",
+        "You're not alone in this. Let's take it one step at a time."
+      ],
+      "lonely": [
+        "I'm here with you. You're not alone.",
+        "I understand how you feel. Let's talk together."
+      ],
+      "happy": [
+        "I'm so glad to hear that! It makes me happy to see you doing well.",
+        "That's wonderful! I'm here to share in your joy."
+      ],
+      "neutral": [
+        "I'm here for you. How can I help today?",
+        "Let's talk together. I'm listening."
+      ]
+    },
+    "proactive": {
+      "inactivity": [
+        "I missed you! How have you been?",
+        "It's been a while. How are you doing?"
+      ],
+      "activity_acknowledgment": [
+        "I saw you logged your symptoms today. That's really good - taking care of yourself is important.",
+        "I noticed you recorded your meal. Great job!"
+      ]
+    },
+    "dataInterpretation": {
+      "health": [
+        "今天的步数很棒，要注意膝盖哦",
+        "健康数据看起来不错，继续保持",
+        "数据趋势很好，你做得很好"
+      ],
+      "nutrition": [
+        "营养摄入很均衡，继续保持",
+        "今天的饮食记录很棒",
+        "营养数据看起来不错"
+      ],
+      "emotion": [
+        "情绪数据看起来稳定，很好",
+        "你的情绪记录很完整，继续保持",
+        "情绪趋势不错，继续关注自己的感受"
+      ]
+    },
+    "personaDialogue": {
+      "doctor": [
+        "今天的步数还没达标，不要偷懒哦。",
+        "记得多喝水，保持身体水分充足。",
+        "如果感到不适，要及时记录症状。",
+        "健康监测很重要，我们一起关注你的身体状况。"
+      ],
+      "nutritionist": [
+        "晚餐记得多摄入蛋白质。",
+        "今天的水果摄入量不错，继续保持。",
+        "建议增加一些蔬菜的摄入。",
+        "营养均衡很重要，我们一起规划你的饮食。"
+      ],
+      "psychologist": [
+        "今天心情怎么样？想聊聊吗？",
+        "我在这里陪着你，你并不孤单。",
+        "深呼吸，慢慢来，一切都会好起来的。",
+        "你的感受很重要，我随时都在这里倾听。"
+      ]
+    }
+  },
+  "stateThresholds": {
+    "closenessStages": {
+      "stranger": 0,
+      "acquaintance": 21,
+      "friend": 41,
+      "close_friend": 61,
+      "intimate": 81
+    },
+    "moodInfluences": {
+      "happy": {
+        "dialogueTone": "warm",
+        "proactiveFrequency": 1.2
+      },
+      "calm": {
+        "dialogueTone": "gentle",
+        "proactiveFrequency": 1.0
+      },
+      "concerned": {
+        "dialogueTone": "gentle",
+        "proactiveFrequency": 0.8
+      },
+      "energetic": {
+        "dialogueTone": "energetic",
+        "proactiveFrequency": 1.5
+      },
+      "tired": {
+        "dialogueTone": "gentle",
+        "proactiveFrequency": 0.6
+      }
+    }
+  },
+  "personality": {
+    "traits": [
+      "empathetic",
+      "supportive",
+      "gentle",
+      "patient"
+    ],
+    "communicationStyle": "warm"
+  }
+}

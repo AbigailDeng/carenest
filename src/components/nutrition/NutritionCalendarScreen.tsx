@@ -1,6 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, getDay, addMonths, subMonths } from 'date-fns';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameDay,
+  getDay,
+  addMonths,
+  subMonths,
+} from 'date-fns';
 import { useFoodReflection } from '../../hooks/useFoodReflection';
 import { useTranslation } from '../../hooks/useTranslation';
 import { FoodReflection, MealType } from '../../types';
@@ -10,7 +19,6 @@ import Button from '../shared/Button';
 export default function NutritionCalendarScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const { getReflectionsForRange } = useFoodReflection();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -18,7 +26,7 @@ export default function NutritionCalendarScreen() {
   const [loading, setLoading] = useState(true);
 
   // Load reflections for current month
-  const loadReflections = async () => {
+  const loadReflections = useCallback(async () => {
     try {
       setLoading(true);
       const monthStart = startOfMonth(currentMonth);
@@ -33,12 +41,12 @@ export default function NutritionCalendarScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentMonth, getReflectionsForRange]);
 
   // Load reflections when month changes
   useEffect(() => {
     loadReflections();
-  }, [currentMonth, getReflectionsForRange]);
+  }, [loadReflections]);
 
   // Reload when page becomes visible (user returns from another screen)
   useEffect(() => {
@@ -49,12 +57,24 @@ export default function NutritionCalendarScreen() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentMonth, getReflectionsForRange]);
+  }, [loadReflections]);
 
   // Reload when location changes (user navigates back to this screen)
   useEffect(() => {
     loadReflections();
-  }, [location.pathname]);
+  }, [location.pathname, loadReflections]);
+
+  // Listen for food reflection saved event to refresh calendar immediately
+  useEffect(() => {
+    const handleFoodReflectionSaved = () => {
+      loadReflections();
+    };
+
+    window.addEventListener('foodReflectionSaved', handleFoodReflectionSaved);
+    return () => {
+      window.removeEventListener('foodReflectionSaved', handleFoodReflectionSaved);
+    };
+  }, [loadReflections]);
 
   // Get reflections for a specific date
   const getReflectionsForDate = (date: Date): FoodReflection[] => {
@@ -96,12 +116,12 @@ export default function NutritionCalendarScreen() {
   const firstDayOfWeek = getDay(monthStart);
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
-  // Meal type colors for dots
+  // Meal type colors for circular indicators
   const mealColors: Record<MealType, string> = {
-    breakfast: 'bg-orange-400', // 早餐 - 橙色
-    lunch: 'bg-blue-400',       // 午餐 - 蓝色
-    dinner: 'bg-purple-400',    // 晚餐 - 紫色
-    snack: 'bg-gray-400',       // 夜宵 - 灰色
+    breakfast: '#fb923c', // 早餐 - 橙色
+    lunch: '#60a5fa', // 午餐 - 蓝色
+    dinner: '#a78bfa', // 晚餐 - 紫色
+    snack: '#9ca3af', // 夜宵 - 灰色
   };
 
   if (loading) {
@@ -113,112 +133,148 @@ export default function NutritionCalendarScreen() {
   }
 
   return (
-    <div className="p-6 min-h-screen bg-clay-bg pb-20">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-heading text-clay-text">
-          {t('nutrition.calendar.title')}
-        </h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePreviousMonth}
-            className="p-2 text-clay-text hover:text-clay-primary rounded-lg hover:bg-clay-mint transition-colors touch-target"
-            aria-label={t('common.previous')}
-          >
-            <span className="text-xl">◀</span>
-          </button>
-          <span className="text-sm font-medium text-clay-text min-w-[120px] text-center font-body">
-            {format(currentMonth, 'yyyy年MM月')}
-          </span>
-          <button
-            onClick={handleNextMonth}
-            className="p-2 text-clay-text hover:text-clay-primary rounded-lg hover:bg-clay-mint transition-colors touch-target"
-            aria-label={t('common.next')}
-          >
-            <span className="text-xl">▶</span>
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pb-20">
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-3xl font-heading text-gray-900">{t('nutrition.calendar.title')}</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePreviousMonth}
+              className="p-2 text-gray-600 hover:text-gray-900 rounded-xl hover:bg-white transition-colors touch-target shadow-sm"
+              aria-label={t('common.previous')}
+            >
+              <span className="text-xl">◀</span>
+            </button>
+            <span className="text-sm font-semibold text-gray-800 min-w-[120px] text-center font-body">
+              {format(currentMonth, 'yyyy年MM月')}
+            </span>
+            <button
+              onClick={handleNextMonth}
+              className="p-2 text-gray-600 hover:text-gray-900 rounded-xl hover:bg-white transition-colors touch-target shadow-sm"
+              aria-label={t('common.next')}
+            >
+              <span className="text-xl">▶</span>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <Card className="mb-6">
-        <div className="grid grid-cols-7 gap-1">
-          {/* Week day headers */}
-          {weekDays.map((day) => (
-            <div key={day} className="text-center text-xs font-semibold text-clay-textDim py-2 font-body">
-              {day}
-            </div>
-          ))}
-
-          {/* Empty cells for days before month starts */}
-          {emptyDays.map((_, index) => (
-            <div key={`empty-${index}`} className="aspect-square" />
-          ))}
-
-          {/* Calendar days */}
-          {calendarDays.map((day) => {
-            const dateReflections = getReflectionsForDate(day);
-            const hasReflections = dateReflections.length > 0;
-            const isToday = isSameDay(day, new Date());
-
-            // Get unique meal types and sort by meal order
-            const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
-            const uniqueMealTypes = Array.from(
-              new Set(dateReflections.map(r => r.mealType))
-            ).sort((a, b) => mealOrder.indexOf(a) - mealOrder.indexOf(b));
-
-            return (
-              <button
-                key={day.toISOString()}
-                onClick={() => handleDateClick(day)}
-                className={`
-                  aspect-square p-1 rounded-lg border-2 transition-colors
-                  ${isToday 
-                    ? 'border-clay-primary bg-clay-mint' 
-                    : hasReflections 
-                    ? 'border-clay-lavender bg-clay-surface hover:bg-clay-mint' 
-                    : 'border-gray-200 hover:border-gray-300'}
-                  ${hasReflections ? 'cursor-pointer' : 'cursor-default'}
-                `}
+        <Card className="mb-6 bg-white shadow-lg border-0">
+          <div className="grid grid-cols-7 gap-2">
+            {/* Week day headers */}
+            {weekDays.map(day => (
+              <div
+                key={day}
+                className="text-center text-xs font-semibold text-gray-600 py-3 font-body"
               >
-                <div className={`text-xs font-medium font-body relative ${
-                  isToday ? 'text-clay-primary' : 'text-clay-text'
-                }`}>
-                  {format(day, 'd')}
-                  {hasReflections && (
-                    <div className="flex gap-0.5 justify-center mt-0.5">
-                      {uniqueMealTypes.map((mealType) => (
-                        <span
-                          key={mealType}
-                          className={`w-1.5 h-1.5 rounded-full ${mealColors[mealType]}`}
-                          title={t(`nutrition.record.mealType.${mealType}`)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </Card>
+                {day}
+              </div>
+            ))}
 
-      {/* Action buttons */}
-      <div className="flex gap-3">
-        <Button
-          variant="outline"
-          fullWidth
-          onClick={() => navigate('/nutrition')}
-        >
-          {t('common.back')}
-        </Button>
-        <Button
-          variant="primary"
-          fullWidth
-          onClick={() => navigate('/nutrition/timeline')}
-        >
-          {t('nutrition.calendar.viewTimeline')}
-        </Button>
+            {/* Empty cells for days before month starts */}
+            {emptyDays.map((_, index) => (
+              <div key={`empty-${index}`} className="aspect-square" />
+            ))}
+
+            {/* Calendar days */}
+            {calendarDays.map(day => {
+              const dateReflections = getReflectionsForDate(day);
+              const hasReflections = dateReflections.length > 0;
+              const isToday = isSameDay(day, new Date());
+
+              // Get unique meal types and sort by meal order
+              const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+              const uniqueMealTypes = Array.from(
+                new Set(dateReflections.map(r => r.mealType))
+              ).sort((a, b) => mealOrder.indexOf(a) - mealOrder.indexOf(b));
+
+              return (
+                <button
+                  key={day.toISOString()}
+                  onClick={() => handleDateClick(day)}
+                  className={`
+                    aspect-square p-2 rounded-xl border-2 transition-all duration-200
+                    ${
+                      isToday
+                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                        : hasReflections
+                          ? 'border-blue-200 bg-blue-50/50 hover:bg-blue-100 hover:border-blue-300 shadow-sm'
+                          : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300'
+                    }
+                    ${hasReflections ? 'cursor-pointer' : 'cursor-default'}
+                  `}
+                >
+                  <div
+                    className={`text-xs font-semibold font-body relative ${
+                      isToday ? 'text-blue-600' : 'text-gray-900'
+                    }`}
+                  >
+                    {format(day, 'd')}
+                    {hasReflections && (
+                      <div className="flex gap-1 justify-center mt-1.5">
+                        {uniqueMealTypes.map(mealType => {
+                          const color = mealColors[mealType];
+                          return (
+                            <svg
+                              key={mealType}
+                              width="12"
+                              height="12"
+                              viewBox="0 0 12 12"
+                              className="flex-shrink-0"
+                            >
+                              <title>{t(`nutrition.record.mealType.${mealType}`)}</title>
+                              <circle
+                                cx="6"
+                                cy="6"
+                                r="5"
+                                fill="none"
+                                stroke="#e5e7eb"
+                                strokeWidth="1.5"
+                              />
+                              <circle
+                                cx="6"
+                                cy="6"
+                                r="5"
+                                fill="none"
+                                stroke={color}
+                                strokeWidth="1.5"
+                                strokeDasharray={`${2 * Math.PI * 5}`}
+                                strokeDashoffset="0"
+                                strokeLinecap="round"
+                                transform="rotate(-90 6 6)"
+                              />
+                            </svg>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* Action buttons */}
+        <div className="flex gap-4">
+          <Button
+            variant="outline"
+            fullWidth
+            onClick={() => navigate('/nutrition')}
+            className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            {t('common.back')}
+          </Button>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={() => navigate('/nutrition/timeline')}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {t('nutrition.calendar.viewTimeline')}
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -15,8 +15,8 @@
   body {
     background-color: #f5f0ff;
     color: #4a4a4a;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 400;
+    font-family: 'Montserrat', 'PingFang SC', 'PingFang Light', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 300;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -36,6 +36,36 @@
 @layer components {
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Companion function sphere pulse (subtle “monitoring” vitality) */
+  .companion-sphere-pulse {
+    animation: companionSpherePulse 2.4s ease-in-out infinite;
+    will-change: transform, box-shadow;
+  }
+
+  @keyframes companionSpherePulse {
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3), 0 0 0 1px rgba(255, 209, 220, 0.2);
+    }
+    50% {
+      transform: scale(1.06);
+      box-shadow: 0 6px 22px rgba(255, 255, 255, 0.36), 0 0 0 1px rgba(255, 209, 220, 0.28),
+        0 0 18px rgba(255, 126, 157, 0.18);
+    }
+  }
+
+  /* Floating animation for glassmorphism cards - FR-034 */
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
   }
 
   /* Claymorphic button with 3D extrusion effect */

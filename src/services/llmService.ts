@@ -48,6 +48,7 @@ export interface SymptomAnalysisOutput {
   suggestions: string[];
   whenToSeekHelp: string;
   disclaimer: string;
+  severity?: 'mild' | 'moderate' | 'severe' | null; // Auto-extracted by AI from free-form text - FR-037(4)
 }
 
 export interface MealSuggestionInput {
@@ -532,23 +533,16 @@ export async function analyzeSymptoms(
     ? '请使用中文回复。所有内容必须使用简体中文。'
     : 'Please respond in English. All content must be in English.';
   
-  const severityText = input.severity 
-    ? (isChinese ? `严重程度: ${input.severity}` : `Severity: ${input.severity}`)
-    : (isChinese ? '未指定严重程度' : 'Severity not specified');
-  const notesText = input.notes 
-    ? (isChinese ? `附加说明: ${input.notes}` : `Additional notes: ${input.notes}`)
-    : '';
-
   const prompt = `${SAFETY_GUARDRAILS}
 
 ${languageInstruction}
 
 You are a supportive health companion analyzing symptoms to provide observational insights and lifestyle guidance.
 
-User's Symptoms:
+User's Symptom Description (free-form text):
 ${input.symptoms}
-${severityText}
-${notesText}
+
+IMPORTANT: Analyze the symptom description and automatically assess the severity level (mild, moderate, or severe) based on the language used, intensity described, and impact on daily life mentioned in the text. Include this severity assessment in your response.
 
 IMPORTANT GUIDELINES:
 - Provide OBSERVATIONAL analysis only, NOT medical diagnosis
@@ -563,7 +557,8 @@ Please provide:
 2. Possible Causes: Possible contributing factors (lifestyle, environmental, stress, etc.) - NOT medical diagnoses
 3. Suggestions: Supportive lifestyle suggestions that may help
 4. When to Seek Help: Clear guidance on when to consult a healthcare professional
-5. Disclaimer: Strong disclaimer that this is observational analysis, not medical advice
+5. Severity Assessment: Based on the symptom description, assess severity as "mild", "moderate", or "severe" (or null if unclear)
+6. Disclaimer: Strong disclaimer that this is observational analysis, not medical advice
 
 ${isChinese ? '请严格按照以下JSON格式回复，不要添加任何其他文字说明：' : 'Please respond STRICTLY in JSON format only, without any additional text:'}
 {
@@ -577,15 +572,35 @@ ${isChinese ? '请严格按照以下JSON格式回复，不要添加任何其他�
     "${isChinese ? '支持性生活方式建议2' : 'Supportive lifestyle suggestion 2'}"
   ],
   "whenToSeekHelp": "${isChinese ? '何时咨询医疗专业人员' : 'When to consult healthcare professional'}",
+  "severity": "${isChinese ? 'mild|moderate|severe|null（根据症状描述自动评估）' : 'mild|moderate|severe|null (auto-assessed from symptom description)'}",
   "disclaimer": "${isChinese ? '这是仅供一般指导的观察性分析，不是医疗诊断或治疗建议。如有医疗问题，请咨询医疗专业人员。' : 'This is observational analysis for general guidance only. It is NOT a medical diagnosis or treatment recommendation. Please consult a healthcare professional for medical concerns.'}"
 }
 
 ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解释性文字。' : 'IMPORTANT: Must return valid JSON format only, no explanatory text.'}`;
 
-  const response = await callLLM([
-    { role: 'system', content: SAFETY_GUARDRAILS },
-    { role: 'user', content: prompt },
-  ]);
+  let response: string;
+  try {
+    response = await callLLM([
+      { role: 'system', content: SAFETY_GUARDRAILS },
+      { role: 'user', content: prompt },
+    ]);
+  } catch (error: any) {
+    console.error('Failed to call LLM for symptom analysis:', error);
+    throw {
+      code: error.code || 'LLM_ERROR',
+      message: error.message || 'Failed to analyze symptoms. Please check your connection and try again.',
+      retryable: error.retryable !== false,
+    } as ApiError;
+  }
+
+  if (!response || typeof response !== 'string') {
+    console.error('Invalid LLM response format:', response);
+    throw {
+      code: 'LLM_ERROR',
+      message: 'Invalid response from AI service. Please try again.',
+      retryable: true,
+    } as ApiError;
+  }
 
   const parsed = parseLLMResponse(response);
 
@@ -603,18 +618,32 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
     : 'This is observational analysis for general guidance only. It is NOT a medical diagnosis or treatment recommendation. Please consult a healthcare professional for medical concerns.';
 
   // Extract fields with proper validation
-  const observations = parsed.observations;
-  const possibleCauses = Array.isArray(parsed.possibleCauses) ? parsed.possibleCauses : [];
-  const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
-  const whenToSeekHelp = parsed.whenToSeekHelp;
-  const disclaimer = parsed.disclaimer;
+  const observations = parsed?.observations;
+  const possibleCauses = Array.isArray(parsed?.possibleCauses) ? parsed.possibleCauses : [];
+  const suggestions = Array.isArray(parsed?.suggestions) ? parsed.suggestions : [];
+  const whenToSeekHelp = parsed?.whenToSeekHelp;
+  const disclaimer = parsed?.disclaimer;
+  // Extract severity - auto-assessed by AI from free-form text - FR-037(4)
+  const severity = (parsed?.severity === 'mild' || parsed?.severity === 'moderate' || parsed?.severity === 'severe') 
+    ? parsed.severity 
+    : null;
   
   // Only use rawResponse as last resort if we have no structured data at all
-  const finalObservations = observations || (parsed.rawResponse && possibleCauses.length === 0 && suggestions.length === 0 ? parsed.rawResponse : null) || defaultObservations;
+  const finalObservations = observations || (parsed?.rawResponse && possibleCauses.length === 0 && suggestions.length === 0 ? parsed.rawResponse : null) || defaultObservations;
   
   // Log warning if structure is incomplete
-  if (!observations && possibleCauses.length === 0 && suggestions.length === 0 && parsed.rawResponse) {
+  if (!observations && possibleCauses.length === 0 && suggestions.length === 0 && parsed?.rawResponse) {
     console.warn('LLM returned unstructured response. Attempting to parse:', parsed.rawResponse);
+  }
+
+  // Validate that we have at least observations
+  if (!finalObservations || finalObservations.trim().length === 0) {
+    console.error('LLM analysis returned empty observations:', { parsed, response });
+    throw {
+      code: 'LLM_ERROR',
+      message: 'AI analysis returned incomplete results. Please try again.',
+      retryable: true,
+    } as ApiError;
   }
 
   return {
@@ -623,6 +652,7 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
     suggestions: suggestions,
     whenToSeekHelp: whenToSeekHelp || defaultWhenToSeekHelp,
     disclaimer: disclaimer || defaultDisclaimer,
+    severity: severity, // Auto-extracted severity - FR-037(4)
   };
 }
 

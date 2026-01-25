@@ -12,6 +12,8 @@ import {
   FoodReflection,
   MealType,
   SugarReductionCup,
+  CharacterState,
+  ConversationMessage,
 } from './types';
 
 // Database schema definition
@@ -52,7 +54,7 @@ export interface WellmateDB extends DBSchema {
     indexes: {
       sourceIngredientListId: string;
       createdAt: string;
-      isFlexible: boolean;
+      isFlexible: number;
     };
   };
   foodReflections: {
@@ -63,7 +65,7 @@ export interface WellmateDB extends DBSchema {
   sugarReductionCups: {
     key: string;
     value: SugarReductionCup;
-    indexes: { lastPourDate: string | null };
+    indexes: { lastPourDate: string };
   };
   userPreferences: {
     key: string;
@@ -72,6 +74,20 @@ export interface WellmateDB extends DBSchema {
   dbVersion: {
     key: number;
     value: DBVersion;
+  };
+  characterState: {
+    key: string;
+    value: CharacterState;
+    indexes: { id: string };
+  };
+  conversations: {
+    key: string;
+    value: ConversationMessage;
+    indexes: {
+      characterId: string;
+      timestamp: string;
+      characterId_timestamp: [string, string];
+    };
   };
 }
 
@@ -88,7 +104,7 @@ type MoodValue =
   | 'tired';
 
 const DB_NAME = 'wellmate_db';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbInstance: IDBPDatabase<WellmateDB> | null = null;
 
@@ -103,6 +119,8 @@ export async function openWellmateDB(): Promise<IDBPDatabase<WellmateDB>> {
 
   dbInstance = await openDB<WellmateDB>(DB_NAME, DB_VERSION, {
     async upgrade(db, _oldVersion, newVersion, transaction) {
+      const targetVersion = newVersion ?? DB_VERSION;
+
       // Create object stores
       if (!db.objectStoreNames.contains('medicalRecords')) {
         const medicalRecordsStore = db.createObjectStore('medicalRecords', {
@@ -161,7 +179,7 @@ export async function openWellmateDB(): Promise<IDBPDatabase<WellmateDB>> {
       }
 
       // Version 2: Add new object stores and enhance existing ones
-      if (newVersion >= 2) {
+      if (targetVersion >= 2) {
         // Add new index to mealSuggestions if it doesn't exist
         if (db.objectStoreNames.contains('mealSuggestions')) {
           const mealSuggestionsStore = transaction.objectStore('mealSuggestions');
@@ -181,7 +199,7 @@ export async function openWellmateDB(): Promise<IDBPDatabase<WellmateDB>> {
           foodReflectionsStore.createIndex('processingStatus', 'processingStatus');
         } else {
           const foodReflectionsStore = transaction.objectStore('foodReflections');
-          
+
           // Add processingStatus index if it doesn't exist
           if (!foodReflectionsStore.indexNames.contains('processingStatus')) {
             foodReflectionsStore.createIndex('processingStatus', 'processingStatus');
@@ -201,24 +219,24 @@ export async function openWellmateDB(): Promise<IDBPDatabase<WellmateDB>> {
         }
 
         // Migrate existing mealSuggestions to add new fields
-        if (newVersion === 2) {
-          migrateToVersion2(db, transaction);
-          migrateToVersion3(db, transaction);
+        if (targetVersion === 2) {
+          await migrateToVersion2(transaction as any);
+          await migrateToVersion3(transaction as any);
         }
       }
 
       // Version 4: Fix date index uniqueness constraint for foodReflections
       // Note: IndexedDB doesn't allow modifying index uniqueness, so we need to
       // delete and recreate the store. We'll migrate data before deleting.
-      if (newVersion >= 4 && _oldVersion < 4) {
+      if (targetVersion >= 4 && _oldVersion < 4) {
         if (db.objectStoreNames.contains('foodReflections')) {
           const foodReflectionsStore = transaction.objectStore('foodReflections');
           // Get all data before deleting the store
           const allReflections = await foodReflectionsStore.getAll();
-          
+
           // Delete the store - it will be recreated below with correct index settings
           db.deleteObjectStore('foodReflections');
-          
+
           // Recreate with correct index settings (non-unique date index)
           const newFoodReflectionsStore = db.createObjectStore('foodReflections', {
             keyPath: 'id',
@@ -227,7 +245,7 @@ export async function openWellmateDB(): Promise<IDBPDatabase<WellmateDB>> {
           newFoodReflectionsStore.createIndex('mealType', 'mealType');
           newFoodReflectionsStore.createIndex('createdAt', 'createdAt');
           newFoodReflectionsStore.createIndex('processingStatus', 'processingStatus');
-          
+
           // Restore all data
           for (const reflection of allReflections) {
             await newFoodReflectionsStore.put(reflection);
@@ -244,6 +262,28 @@ export async function openWellmateDB(): Promise<IDBPDatabase<WellmateDB>> {
         }
       }
 
+      // Version 5: Add companion character system stores
+      if (targetVersion >= 5 && _oldVersion < 5) {
+        // Create characterState object store
+        if (!db.objectStoreNames.contains('characterState')) {
+          const characterStateStore = db.createObjectStore('characterState', {
+            keyPath: 'id',
+          });
+          characterStateStore.createIndex('id', 'id', { unique: true });
+        }
+
+        // Create conversations object store
+        if (!db.objectStoreNames.contains('conversations')) {
+          const conversationsStore = db.createObjectStore('conversations', {
+            keyPath: 'id',
+          });
+          conversationsStore.createIndex('characterId', 'characterId');
+          conversationsStore.createIndex('timestamp', 'timestamp');
+          // Compound index for efficient queries: characterId + timestamp
+          conversationsStore.createIndex('characterId_timestamp', ['characterId', 'timestamp']);
+        }
+      }
+
       if (!db.objectStoreNames.contains('userPreferences')) {
         db.createObjectStore('userPreferences', { keyPath: 'id' });
       }
@@ -255,7 +295,7 @@ export async function openWellmateDB(): Promise<IDBPDatabase<WellmateDB>> {
       // Initialize DB version
       const versionStore = transaction.objectStore('dbVersion');
       versionStore.put({
-        version: newVersion || DB_VERSION,
+        version: targetVersion,
         lastMigration: new Date().toISOString(),
       } as DBVersion);
     },
@@ -285,15 +325,12 @@ export async function closeDB(): Promise<void> {
  * Migrate database to version 2
  * Adds new fields to existing mealSuggestions records
  */
-async function migrateToVersion3(
-  db: IDBPDatabase<WellmateDB>,
-  transaction: IDBTransaction
-): Promise<void> {
+async function migrateToVersion3(transaction: any): Promise<void> {
   // Migrate foodReflections: add mealType to existing records
   if (transaction.objectStoreNames.contains('foodReflections')) {
     const foodReflectionsStore = transaction.objectStore('foodReflections');
     const allReflections = await foodReflectionsStore.getAll();
-    
+
     // Update existing records to have default mealType if missing
     for (const reflection of allReflections) {
       if (!('mealType' in reflection) || !reflection.mealType) {
@@ -308,10 +345,7 @@ async function migrateToVersion3(
   }
 }
 
-async function migrateToVersion2(
-  db: IDBPDatabase<WellmateDB>,
-  transaction: IDBTransaction
-): Promise<void> {
+async function migrateToVersion2(transaction: any): Promise<void> {
   const mealSuggestionsStore = transaction.objectStore('mealSuggestions');
   const allSuggestions = await mealSuggestionsStore.getAll();
 
@@ -321,8 +355,9 @@ async function migrateToVersion2(
       ...suggestion,
       timeAwareGuidance: null,
       isFlexible: true,
+      detailedPreparationMethod: null,
+      imageUrl: null,
     };
     await mealSuggestionsStore.put(updated);
   }
 }
-
