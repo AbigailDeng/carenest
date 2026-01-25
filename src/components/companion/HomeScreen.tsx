@@ -1,14 +1,14 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Activity, Leaf, Heart } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useCompanion } from '../../hooks/useCompanion';
 import { useConversation } from '../../hooks/useConversation';
 import { generateCompanionDialogue, getTimeOfDay } from '../../services/companionService';
 import { ConversationMessage } from '../../types';
-import CharacterLayer from './CharacterLayer';
-import SceneBackground from './SceneBackground';
 import FloatingParticles from './FloatingParticles';
 import FunctionSpheres from './FunctionSpheres';
+import RadialMenu from './RadialMenu';
 import IconExpansionTransition from './IconExpansionTransition';
 import FullScreenChartPanel from './FullScreenChartPanel';
 import ImageBackground from '../shared/ImageBackground';
@@ -35,6 +35,8 @@ export default function HomeScreen() {
     position: { x: number; y: number; width: number; height: number };
     element: React.ReactNode;
   } | null>(null);
+  const [radialMenuOpen, setRadialMenuOpen] = useState(false);
+  const [radialMenuClickPosition, setRadialMenuClickPosition] = useState<{ x: number; y: number } | null>(null);
 
   const hasInitialized = useRef(false);
   const greetingGenerated = useRef(false);
@@ -328,61 +330,64 @@ export default function HomeScreen() {
     setExpandingIcon(null);
   };
 
-  // Character layer URLs
-  const characterLayerUrls = [
-    '/assets/characters/baiqi/illustrations/gavin-character.png',
-    'https://gd-hbimg-edge.huaban.com/e4b350614dc31956b17bdf09aa2f2eeaa0fc787cc0376-UVVzl0_fw658webp',
-    'https://i.pinimg.com/564x/8b/9a/36/8b9a368031f439d94631df685c360739.jpg',
-  ];
-
-  // Background image URL
-  const backgroundImageUrl =
-    'https://i.pinimg.com/564x/a6/39/19/a639190333210fb5da77b4903661354e.jpg';
+  // Background image URL - use specified character illustration (白起立绘)
+  const backgroundImageUrl = '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
 
   return (
-    <ImageBackground imageUrl={backgroundImageUrl}>
+    <div
+      className="relative min-h-screen flex flex-col overflow-hidden"
+      style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0, background: 'transparent' }}
+    >
+      {/* ImageBackground - 最底层唯一的白起立绘 */}
+      <ImageBackground imageUrl={backgroundImageUrl} />
+
+      {/* Minimal transparent title (replaces ugly white bar) */}
       <div
-        className="relative min-h-screen flex flex-col overflow-hidden"
-        style={{ background: '#FDEEF4' }}
+        className="fixed left-5 top-5 z-[55]"
+        style={{
+          color: 'rgba(255,255,255,0.98)',
+          textShadow: '0 2px 10px rgba(0,0,0,0.25)',
+          fontFamily: "'Montserrat', 'PingFang SC', 'PingFang Light', sans-serif",
+          fontWeight: 500,
+          letterSpacing: '0.2px',
+        }}
       >
-        {/* Minimal transparent title (replaces ugly white bar) */}
-        <div
-          className="fixed left-5 top-5 z-[55]"
-          style={{
-            color: 'rgba(255,255,255,0.98)',
-            textShadow: '0 2px 10px rgba(0,0,0,0.25)',
-            fontFamily: "'Montserrat', 'PingFang SC', 'PingFang Light', sans-serif",
-            fontWeight: 500,
-            letterSpacing: '0.2px',
-          }}
-        >
-          {t('app.title') || 'Wellmate'}
-        </div>
+        {t('app.title') || 'Wellmate'}
+      </div>
 
-        {/* Character Layer - Full-screen with floating animation */}
-        <div
-          className="fixed inset-0"
-          style={{
-            zIndex: 3,
-            pointerEvents: 'none', // Don't block clicks on conversation area
-          }}
-        >
-          <CharacterLayer
-            imageUrl={characterLayerUrls}
-            resizeMode="cover"
-            alt="Character illustration"
-          />
-        </div>
+      {/* Radial menu click area - Full-screen with floating animation */}
+      <div
+        className="fixed inset-0"
+        style={{
+          zIndex: 3,
+          pointerEvents: 'auto', // Enable clicks for radial menu
+        }}
+        onClick={(e) => {
+          // Only trigger radial menu if clicking character center/chest area (not conversation area)
+          const rect = e.currentTarget.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          const clickX = e.clientX;
+          const clickY = e.clientY;
+          
+          // Check if click is in center 40% area (chest region)
+          const centerRegionWidth = rect.width * 0.4;
+          const centerRegionHeight = rect.height * 0.4;
+          const isInCenterRegion =
+            Math.abs(clickX - centerX) < centerRegionWidth / 2 &&
+            Math.abs(clickY - centerY) < centerRegionHeight / 2;
+          
+          if (isInCenterRegion && !radialMenuOpen) {
+            setRadialMenuClickPosition({ x: clickX, y: clickY });
+            setRadialMenuOpen(true);
+          }
+        }}
+      />
 
-        {/* Scene Background */}
-        <div className="absolute inset-0" style={{ zIndex: 1 }}>
-          <SceneBackground characterId={CHARACTER_ID} />
-        </div>
-
-        {/* Floating Particles */}
-        <div className="absolute inset-0" style={{ zIndex: 2 }}>
-          <FloatingParticles count={20} />
-        </div>
+      {/* Floating Particles */}
+      <div className="absolute inset-0" style={{ zIndex: 2 }}>
+        <FloatingParticles count={20} />
+      </div>
 
         {/* Function Spheres - Top Right */}
         <FunctionSpheres
@@ -520,6 +525,52 @@ export default function HomeScreen() {
           </div>
         </div>
 
+        {/* Radial Menu - FR-031D */}
+        <RadialMenu
+          isOpen={radialMenuOpen}
+          onClose={() => {
+            setRadialMenuOpen(false);
+            setRadialMenuClickPosition(null);
+          }}
+          onIconClick={(module) => {
+            if (module === 'settings') {
+              // Handle settings separately if needed
+              return;
+            }
+            
+            // Get icon element and position for expansion transition
+            const iconElement = (
+              <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  backdropFilter: 'blur(25px)',
+                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                }}
+              >
+                {module === 'health' && <Activity size={24} />}
+                {module === 'nutrition' && <Leaf size={24} />}
+                {module === 'emotion' && <Heart size={24} />}
+              </div>
+            );
+            
+            setExpandingIcon({
+              module: module as 'health' | 'nutrition' | 'emotion',
+              position: radialMenuClickPosition
+                ? {
+                    x: radialMenuClickPosition.x - 32,
+                    y: radialMenuClickPosition.y - 32,
+                    width: 64,
+                    height: 64,
+                  }
+                : { x: window.innerWidth / 2 - 32, y: window.innerHeight / 2 - 32, width: 64, height: 64 },
+              element: iconElement,
+            });
+            setRadialMenuOpen(false);
+            setRadialMenuClickPosition(null);
+          }}
+          clickPosition={radialMenuClickPosition}
+        />
+
         {/* Icon Expansion Transition */}
         {expandingIcon && (
           <IconExpansionTransition
@@ -530,7 +581,6 @@ export default function HomeScreen() {
             onClose={handlePanelClose}
           />
         )}
-      </div>
-    </ImageBackground>
+    </div>
   );
 }

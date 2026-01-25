@@ -1,12 +1,14 @@
 import { getTimeOfDay } from '../../services/companionService';
 import { getCharacterConfig } from '../../config/characters';
+import { CharacterMood } from '../../types';
 
 interface SceneBackgroundProps {
   characterId: string;
+  mood?: CharacterMood; // Character mood for mood-based background variations (per FR-025)
   className?: string;
 }
 
-export default function SceneBackground({ characterId, className = '' }: SceneBackgroundProps) {
+export default function SceneBackground({ characterId, mood, className = '' }: SceneBackgroundProps) {
   const config = getCharacterConfig(characterId);
   if (!config) {
     return null;
@@ -15,6 +17,24 @@ export default function SceneBackground({ characterId, className = '' }: SceneBa
   const timeOfDay = getTimeOfDay();
   const backgroundUrl = config.backgroundUrls[timeOfDay] || config.backgroundUrls.morning;
   const floralOverlayUrl = '/assets/characters/overlays/floral.svg';
+
+  // Mood-based background color variations (per FR-025)
+  const getMoodOverlay = (mood?: CharacterMood) => {
+    if (!mood) return 'from-pink-50/70 via-rose-50/70 via-lavender-50/70 to-purple-50/70';
+    switch (mood) {
+      case 'happy':
+        return 'from-pink-100/80 via-rose-100/80 to-yellow-50/60'; // Warm, bright
+      case 'concerned':
+        return 'from-blue-50/70 via-indigo-50/70 to-purple-50/70'; // Calming, cool
+      case 'energetic':
+        return 'from-orange-50/80 via-yellow-50/80 to-pink-50/80'; // Energetic, vibrant
+      case 'tired':
+        return 'from-gray-50/60 via-slate-50/60 to-blue-50/60'; // Soft, muted
+      case 'calm':
+      default:
+        return 'from-pink-50/70 via-rose-50/70 via-lavender-50/70 to-purple-50/70'; // Default romantic
+    }
+  };
 
   return (
     <div className={`absolute inset-0 overflow-hidden ${className}`}>
@@ -40,8 +60,8 @@ export default function SceneBackground({ characterId, className = '' }: SceneBa
         `}</style>
       </div>
 
-      {/* Romantic gradient overlay with pastel colors */}
-      <div className="absolute inset-0 bg-gradient-to-br from-pink-50/70 via-rose-50/70 via-lavender-50/70 to-purple-50/70" />
+      {/* Mood-based gradient overlay with pastel colors (per FR-025) */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${getMoodOverlay(mood)}`} />
 
       {/* Additional soft pink/rose overlay for romantic feel */}
       <div className="absolute inset-0 bg-gradient-to-t from-pink-100/40 via-transparent to-transparent" />

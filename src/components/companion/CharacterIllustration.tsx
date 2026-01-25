@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
+import { CharacterMood } from '../../types';
+import { getCharacterConfig } from '../../config/characters';
 
 interface CharacterIllustrationProps {
-  imageUrl: string;
+  imageUrl?: string; // Optional if using mood
+  characterId?: string; // Character ID for mood-based illustration lookup
+  mood?: CharacterMood; // Character mood for mood-specific illustration (per FR-003, FR-011)
   alt?: string;
   className?: string;
 }
@@ -12,25 +16,36 @@ const imageCache = new Map<string, HTMLImageElement>();
 
 export default function CharacterIllustration({
   imageUrl,
+  characterId,
+  mood,
   alt = 'Character illustration',
   className = '',
 }: CharacterIllustrationProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // Get mood-specific illustration URL if characterId and mood provided
+  let resolvedImageUrl = imageUrl;
+  if (characterId && mood) {
+    const config = getCharacterConfig(characterId);
+    if (config && config.illustrationUrls[mood]) {
+      resolvedImageUrl = config.illustrationUrls[mood];
+    }
+  }
+
   // T060: Preload and cache images for better performance
   useEffect(() => {
-    if (!imageUrl) {
+    if (!resolvedImageUrl) {
       console.warn('[CharacterIllustration] No imageUrl provided');
       setError(true);
       setLoading(false);
       return;
     }
 
-    console.log('[CharacterIllustration] Loading image:', imageUrl);
+    console.log('[CharacterIllustration] Loading image:', resolvedImageUrl);
 
     // Check cache first
-    if (imageCache.has(imageUrl)) {
+    if (imageCache.has(resolvedImageUrl)) {
       console.log('[CharacterIllustration] Image found in cache');
       setLoading(false);
       setError(false);
@@ -42,20 +57,20 @@ export default function CharacterIllustration({
     img.crossOrigin = 'anonymous'; // Allow CORS if needed
 
     img.onload = () => {
-      console.log('[CharacterIllustration] Image preloaded successfully:', imageUrl, {
+      console.log('[CharacterIllustration] Image preloaded successfully:', resolvedImageUrl, {
         width: img.width,
         height: img.height,
         naturalWidth: img.naturalWidth,
         naturalHeight: img.naturalHeight,
       });
-      imageCache.set(imageUrl, img);
+      imageCache.set(resolvedImageUrl, img);
       setLoading(false);
       setError(false);
     };
     img.onerror = err => {
-      console.error('[CharacterIllustration] Image preload failed:', imageUrl, {
+      console.error('[CharacterIllustration] Image preload failed:', resolvedImageUrl, {
         error: err,
-        attemptedUrl: imageUrl,
+        attemptedUrl: resolvedImageUrl,
         imgSrc: img.src,
       });
       setLoading(false);
@@ -63,25 +78,25 @@ export default function CharacterIllustration({
     };
 
     // Set src after setting up handlers
-    img.src = imageUrl;
+    img.src = resolvedImageUrl;
 
     // Also check if image loads via fetch to get more error details
-    fetch(imageUrl, { method: 'HEAD' })
+    fetch(resolvedImageUrl, { method: 'HEAD' })
       .then(response => {
         if (!response.ok) {
-          console.error('[CharacterIllustration] Image fetch failed:', imageUrl, {
+          console.error('[CharacterIllustration] Image fetch failed:', resolvedImageUrl, {
             status: response.status,
             statusText: response.statusText,
           });
         } else {
-          console.log('[CharacterIllustration] Image fetch successful:', imageUrl, {
+          console.log('[CharacterIllustration] Image fetch successful:', resolvedImageUrl, {
             status: response.status,
             contentType: response.headers.get('content-type'),
           });
         }
       })
       .catch(err => {
-        console.error('[CharacterIllustration] Image fetch error:', imageUrl, err);
+        console.error('[CharacterIllustration] Image fetch error:', resolvedImageUrl, err);
       });
 
     return () => {
@@ -89,7 +104,7 @@ export default function CharacterIllustration({
       img.onload = null;
       img.onerror = null;
     };
-  }, [imageUrl]);
+  }, [resolvedImageUrl]);
 
   return (
     <div className={`relative ${className}`}>
@@ -109,7 +124,7 @@ export default function CharacterIllustration({
         </div>
       ) : (
         <img
-          src={imageUrl}
+          src={resolvedImageUrl}
           alt={alt}
           className={`
             w-full
@@ -124,12 +139,12 @@ export default function CharacterIllustration({
           decoding="async"
           crossOrigin="anonymous"
           onLoad={e => {
-            console.log('[CharacterIllustration] Image loaded successfully:', imageUrl, e.target);
+            console.log('[CharacterIllustration] Image loaded successfully:', resolvedImageUrl, e.target);
             setLoading(false);
             setError(false);
           }}
           onError={e => {
-            console.error('[CharacterIllustration] Image load error:', imageUrl, e);
+            console.error('[CharacterIllustration] Image load error:', resolvedImageUrl, e);
             console.error('[CharacterIllustration] Error details:', {
               target: e.target,
               currentTarget: e.currentTarget,

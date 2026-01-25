@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { format, parseISO, subDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from 'date-fns';
+import { format, parseISO, subDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isAfter, startOfDay } from 'date-fns';
 import { SymptomEntry, MedicalRecord } from '../../types';
 import { useSymptomEntries } from '../../hooks/useSymptomEntries';
 import { useMedicalRecords } from '../../hooks/useMedicalRecords';
 import { useTranslation } from '../../hooks/useTranslation';
 import { truncateFilename } from '../../utils/truncate';
 import { motion } from 'framer-motion';
-import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, Pencil, Trash2, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, Trash2, X } from 'lucide-react';
 import CharacterAvatar from '../companion/CharacterAvatar';
 import { useCompanion } from '../../hooks/useCompanion';
+import ImageBackground from '../shared/ImageBackground';
 
 export default function HealthTimelineScreen() {
   const navigate = useNavigate();
@@ -24,7 +25,12 @@ export default function HealthTimelineScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'timeline'>('calendar');
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'symptom' | 'record'; id: string; title: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ 
+    type: 'symptom' | 'record'; 
+    id: string; 
+    title: string;
+    associatedSymptomEntryId?: string; // For medical records that are associated with symptom entries
+  } | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const BAIQI_IMAGE_URL =
@@ -118,69 +124,117 @@ export default function HealthTimelineScreen() {
         subtitle: string | null;
         details: null;
         record: MedicalRecord;
+        associatedSymptomEntryId?: string; // ID of associated symptom entry
       };
 
   // Combine entries and records for timeline
+  // Logic: If symptom entry has associated medical record (image), show as medical record with symptom text as title
+  // If no medical record, show as simple symptom entry
   const timelineItems = useMemo((): TimelineItem[] => {
     if (loading) {
       return [];
     }
-    let itemsToShow: TimelineItem[] = [
-      ...filteredEntries.map((entry) => ({
-        type: 'symptom' as const,
-        id: entry.id,
-        date: entry.loggedDate,
-        title: entry.symptoms,
-        subtitle: entry.severity ? entry.severity : null,
-        severity: entry.severity,
-        details: entry.notes,
-        entry: entry, // Keep full entry for details
-      })),
-    ];
-
-    // Add records - if no selected date, filter by dateRange; if selected date, filter by that date
-    if (!selectedDate) {
-      // Timeline View: filter records by dateRange (last X days)
-      const cutoffDate = subDays(new Date(), dateRange);
-      itemsToShow = [
-        ...itemsToShow,
-        ...records
-          .filter((r) => {
-            const recordDate = parseISO(r.uploadDate);
-            return recordDate >= cutoffDate;
-          })
-          .map((record) => ({
-            type: 'record' as const,
-            id: record.id,
-            date: record.uploadDate,
-            title: truncateFilename(record.filename, 20),
-            fullTitle: record.filename, // Keep full filename for tooltip
-            subtitle: record.processingStatus === 'completed' ? 'AI Summary Available' : null,
-            details: null,
-            record: record, // Keep full record for details
-          })),
-      ];
-    } else {
-      // Filter records by selected date
-      const dateStr = selectedDate;
-      itemsToShow = [
-        ...itemsToShow,
-        ...records
-          .filter((r) => {
-            return format(parseISO(r.uploadDate), 'yyyy-MM-dd') === dateStr;
-          })
-          .map((record) => ({
-            type: 'record' as const,
-            id: record.id,
-            date: record.uploadDate,
-            title: truncateFilename(record.filename, 20),
-            fullTitle: record.filename, // Keep full filename for tooltip
-            subtitle: record.processingStatus === 'completed' ? 'AI Summary Available' : null,
-            details: null,
-            record: record,
-          })),
-      ];
-    }
+    
+    const itemsToShow: TimelineItem[] = [];
+    
+    // Get date range for filtering records
+    const cutoffDate = selectedDate 
+      ? parseISO(selectedDate + 'T00:00:00')
+      : subDays(new Date(), dateRange);
+    
+    // Process entries: check if they have associated medical records
+    filteredEntries.forEach((entry) => {
+      const entryDateStr = format(parseISO(entry.loggedDate), 'yyyy-MM-dd');
+      
+      // Find associated medical records (images) for the same date and symptom text
+      // Match by date and symptom text to ensure correct association
+      const entrySymptomsTrimmed = entry.symptoms.trim();
+      const associatedRecords = records.filter((r) => {
+        const recordDate = parseISO(r.uploadDate);
+        const recordDateStr = format(recordDate, 'yyyy-MM-dd');
+        // Match by date and symptom text (stored in aiSummary when saved)
+        // If aiSummary matches entry.symptoms, they're associated
+        // Also match if aiSummary is empty/null (for older records)
+        const recordSymptomsTrimmed = (r.aiSummary || '').trim();
+        return recordDateStr === entryDateStr && 
+               r.fileType === 'image' && 
+               (recordSymptomsTrimmed === entrySymptomsTrimmed || recordSymptomsTrimmed === '');
+      });
+      
+      if (associatedRecords.length > 0) {
+        // Has medical records: show as ONE medical record (merged), not separate items
+        // Use the first record as the representative, but show symptom text as title
+        const firstRecord = associatedRecords[0];
+        itemsToShow.push({
+          type: 'record' as const,
+          id: firstRecord.id, // Use first record's ID, but represent the merged entry
+          date: entry.loggedDate, // Use symptom entry date for consistency
+          title: entry.symptoms, // Always use symptom text as title
+          fullTitle: entry.symptoms,
+          subtitle: firstRecord.processingStatus === 'completed' ? 'AI Summary Available' : null,
+          details: null,
+          record: firstRecord, // Keep reference to first record
+          associatedSymptomEntryId: entry.id, // Store associated symptom entry ID
+        });
+        // Don't create separate items for other records - they're all part of the same entry
+      } else {
+        // No medical records: show as simple symptom entry
+        itemsToShow.push({
+          type: 'symptom' as const,
+          id: entry.id,
+          date: entry.loggedDate,
+          title: entry.symptoms,
+          subtitle: null, // Don't show severity
+          severity: entry.severity,
+          details: entry.notes,
+          entry: entry,
+        });
+      }
+    });
+    
+    // Track which symptom entries already have medical records (to avoid duplicates)
+    const entriesWithRecords = new Set(
+      filteredEntries
+        .filter((entry) => {
+          const entryDateStr = format(parseISO(entry.loggedDate), 'yyyy-MM-dd');
+          return records.some((r) => {
+            const recordDateStr = format(parseISO(r.uploadDate), 'yyyy-MM-dd');
+            return recordDateStr === entryDateStr && 
+                   r.fileType === 'image' && 
+                   (r.aiSummary === entry.symptoms || !r.aiSummary);
+          });
+        })
+        .map((e) => format(parseISO(e.loggedDate), 'yyyy-MM-dd') + '|' + e.symptoms.trim())
+    );
+    
+    // Add standalone medical records (without associated symptom entries)
+    // These are records uploaded directly without symptom text
+    const standaloneRecords = records.filter((r) => {
+      const recordDate = parseISO(r.uploadDate);
+      const recordDateStr = format(recordDate, 'yyyy-MM-dd');
+      const isInRange = selectedDate 
+        ? recordDateStr === selectedDate
+        : recordDate >= cutoffDate;
+      
+      if (!isInRange || r.fileType !== 'image') return false;
+      
+      // Check if this record is already associated with a symptom entry
+      const recordKey = recordDateStr + '|' + (r.aiSummary || '').trim();
+      return !entriesWithRecords.has(recordKey);
+    });
+    
+    standaloneRecords.forEach((record) => {
+      itemsToShow.push({
+        type: 'record' as const,
+        id: record.id,
+        date: record.uploadDate,
+        title: record.aiSummary || truncateFilename(record.filename, 20), // Use symptom text if available
+        fullTitle: record.aiSummary || record.filename,
+        subtitle: record.processingStatus === 'completed' ? 'AI Summary Available' : null,
+        details: null,
+        record: record,
+      });
+    });
 
     return itemsToShow.sort((a, b) => {
       const dateA = parseISO(a.date);
@@ -189,7 +243,7 @@ export default function HealthTimelineScreen() {
     });
   }, [filteredEntries, records, selectedDate, dateRange, loading]);
 
-  // Calendar data
+  // Calendar data - only records with images count as medical records
   const monthItems = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
@@ -199,9 +253,10 @@ export default function HealthTimelineScreen() {
       return entryDate >= monthStart && entryDate <= monthEnd;
     });
 
+    // Only include records with images (fileType === 'image')
     const monthRecords = records.filter((record) => {
       const recordDate = parseISO(record.uploadDate);
-      return recordDate >= monthStart && recordDate <= monthEnd;
+      return recordDate >= monthStart && recordDate <= monthEnd && record.fileType === 'image';
     });
 
     return { entries: monthEntries, records: monthRecords };
@@ -212,10 +267,26 @@ export default function HealthTimelineScreen() {
     const dayEntries = monthItems.entries.filter((entry) => {
       return format(parseISO(entry.loggedDate), 'yyyy-MM-dd') === dateStr;
     });
+    // Only include records with images (fileType === 'image')
     const dayRecords = monthItems.records.filter((record) => {
-      return format(parseISO(record.uploadDate), 'yyyy-MM-dd') === dateStr;
+      return format(parseISO(record.uploadDate), 'yyyy-MM-dd') === dateStr && record.fileType === 'image';
     });
-    return { entries: dayEntries, records: dayRecords };
+    
+    // Filter: if entry has associated medical record (by date and symptom text), don't show as symptom entry
+    // Only show symptom entries that don't have medical records
+    const entriesWithoutRecords = dayEntries.filter((entry) => {
+      const entrySymptoms = entry.symptoms.trim();
+      const hasAssociatedRecord = dayRecords.some((record) => {
+        const recordDateStr = format(parseISO(record.uploadDate), 'yyyy-MM-dd');
+        const entryDateStr = format(parseISO(entry.loggedDate), 'yyyy-MM-dd');
+        // Match by date and symptom text
+        return recordDateStr === entryDateStr && 
+               (record.aiSummary === entrySymptoms || !record.aiSummary);
+      });
+      return !hasAssociatedRecord;
+    });
+    
+    return { entries: entriesWithoutRecords, records: dayRecords };
   };
 
   const calendarDays = eachDayOfInterval({
@@ -227,6 +298,12 @@ export default function HealthTimelineScreen() {
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
   const handleDateClick = (date: Date) => {
+    // Don't allow clicking on future dates
+    const today = startOfDay(new Date());
+    const selectedDay = startOfDay(date);
+    if (isAfter(selectedDay, today)) {
+      return; // Disable future dates
+    }
     const dateStr = format(date, 'yyyy-MM-dd');
     navigate(`/health/timeline?date=${dateStr}`);
   };
@@ -250,7 +327,41 @@ export default function HealthTimelineScreen() {
       if (deleteConfirm.type === 'symptom') {
         await deleteEntry(deleteConfirm.id);
       } else {
+        // Before deleting, check if this medical record is associated with a symptom entry
+        // and if there are other medical records for that entry
+        let shouldDeleteAssociatedEntry = false;
+        if (deleteConfirm.associatedSymptomEntryId) {
+          const associatedEntry = entries.find(e => e.id === deleteConfirm.associatedSymptomEntryId);
+          if (associatedEntry) {
+            const entryDateStr = format(parseISO(associatedEntry.loggedDate), 'yyyy-MM-dd');
+            const entrySymptoms = associatedEntry.symptoms.trim();
+            
+            // Check if there are any remaining medical records for this symptom entry
+            // (excluding the one we're about to delete)
+            const remainingRecords = records.filter((r) => {
+              if (r.id === deleteConfirm.id) return false; // Exclude the one we're about to delete
+              const recordDate = parseISO(r.uploadDate);
+              const recordDateStr = format(recordDate, 'yyyy-MM-dd');
+              const recordSymptomsTrimmed = (r.aiSummary || '').trim();
+              return recordDateStr === entryDateStr && 
+                     r.fileType === 'image' && 
+                     (recordSymptomsTrimmed === entrySymptoms || recordSymptomsTrimmed === '');
+            });
+            
+            // If no remaining medical records, mark for deletion
+            if (remainingRecords.length === 0) {
+              shouldDeleteAssociatedEntry = true;
+            }
+          }
+        }
+        
+        // Delete medical record
         await deleteRecord(deleteConfirm.id);
+        
+        // If no other medical records exist for this symptom entry, delete the symptom entry too
+        if (shouldDeleteAssociatedEntry && deleteConfirm.associatedSymptomEntryId) {
+          await deleteEntry(deleteConfirm.associatedSymptomEntryId);
+        }
       }
       setDeleteConfirm(null);
       // Refresh filtered entries if needed
@@ -278,19 +389,30 @@ export default function HealthTimelineScreen() {
     }
   };
 
-  const handleEdit = (item: { type: 'symptom' | 'record'; id: string }) => {
-    if (item.type === 'symptom') {
-      navigate(`/health/symptoms/edit/${item.id}`);
-    } else {
-      // For medical records, navigate to summary page where user can see details
-      // Medical records editing would require re-upload, so we just navigate to view
-      navigate(`/health/summary/${item.id}`);
-    }
-  };
 
-  const handleView = (item: { type: 'symptom' | 'record'; id: string }) => {
+  const handleView = (item: TimelineItem) => {
     if (item.type === 'record') {
-      navigate(`/health/summary/${item.id}`);
+      // Medical records are displayed in symptom detail pages
+      // Use stored associated symptom entry ID if available
+      if (item.associatedSymptomEntryId) {
+        navigate(`/health/symptoms/${item.associatedSymptomEntryId}`);
+      } else {
+        // Fallback: find by date and symptom text match (for standalone records)
+        const recordDate = parseISO(item.date);
+        const recordDateStr = format(recordDate, 'yyyy-MM-dd');
+        const recordTitle = item.title; // This should be the symptom text
+        
+        // Find entry that matches both date and symptom text exactly
+        const associatedEntry = entries.find((entry) => {
+          const entryDateStr = format(parseISO(entry.loggedDate), 'yyyy-MM-dd');
+          return entryDateStr === recordDateStr && entry.symptoms.trim() === recordTitle.trim();
+        });
+        
+        if (associatedEntry) {
+          navigate(`/health/symptoms/${associatedEntry.id}`);
+        }
+        // If no associated entry, stay on timeline
+      }
     } else {
       navigate(`/health/symptoms/${item.id}`);
     }
@@ -298,23 +420,14 @@ export default function HealthTimelineScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen overflow-hidden">
-        <div className="fixed inset-0">
-          <img
-            src={BAIQI_IMAGE_URL}
-            alt="Bai Qi background"
-            className="w-full h-full object-cover"
-            style={{ filter: 'blur(6px)', transform: 'scale(1.04)', opacity: 0.92 }}
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0.38) 100%)',
-            }}
-          />
-        </div>
-        <div className="relative z-10 px-5 pt-28 max-w-md mx-auto">
+      <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+        {/* ImageBackground - 最底层唯一的白起立绘 */}
+        <ImageBackground imageUrl={BAIQI_IMAGE_URL} />
+        <div className="relative z-10 w-full" style={{ 
+          paddingTop: 'calc(env(safe-area-inset-top) + 112px)',
+          paddingLeft: '20px',
+          paddingRight: '20px',
+        }}>
           <div
             className="text-center py-12"
             style={{
@@ -334,28 +447,48 @@ export default function HealthTimelineScreen() {
   }
 
   return (
-    <div className="min-h-screen overflow-hidden">
-      {/* Visual Foundation: Bai Qi with reduced blur on face area */}
-      <div className="fixed inset-0">
-        <img
-          src={BAIQI_IMAGE_URL}
-          alt="Bai Qi background"
-          className="w-full h-full object-cover"
-          style={{ filter: 'blur(6px)', transform: 'scale(1.04)', opacity: 0.92 }}
-        />
-        {/* Lighter gradient overlay - keep Bai Qi's face visible */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0.38) 100%)',
-          }}
-        />
-      </div>
+    <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+      {/* ImageBackground - 最底层唯一的白起立绘 */}
+      <ImageBackground imageUrl={BAIQI_IMAGE_URL} />
+
+      {/* Back button - top-left corner */}
+      <motion.button
+        onClick={() => {
+          // If in Day Detail View (selectedDate exists), go back to timeline calendar view
+          // Otherwise, go back to health home
+          if (selectedDate) {
+            navigate('/health/timeline');
+          } else {
+            navigate('/health');
+          }
+        }}
+        className="fixed top-5 left-5 z-50 rounded-full flex items-center justify-center transition-all duration-200 touch-target"
+        style={{
+          width: '56px',
+          height: '56px',
+          background: 'rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.4)',
+          boxShadow: '0 4px 24px rgba(255, 255, 255, 0.2)',
+          color: TEXT,
+        }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        aria-label={t('common.back')}
+      >
+        <ChevronLeft size={28} strokeWidth={2} />
+      </motion.button>
 
       <div
-        className="relative z-10 px-5 pt-20 max-w-md mx-auto"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 100px)' }}
+        className="relative z-10 w-full"
+        style={{ 
+          paddingTop: 'calc(env(safe-area-inset-top) + 80px)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom) + 100px)',
+          paddingLeft: '20px',
+          paddingRight: '20px',
+          margin: 0,
+        }}
       >
 
         {/* Calendar view header controls */}
@@ -498,6 +631,7 @@ export default function HealthTimelineScreen() {
                     const hasRecords = items.records.length > 0;
                     const hasItems = hasSymptoms || hasRecords;
                     const today = isSameDay(day, new Date());
+                    const isFuture = isAfter(startOfDay(day), startOfDay(new Date()));
                     
                     // Determine glow color based on record type
                     let glowColor: string | null = null;
@@ -532,12 +666,15 @@ export default function HealthTimelineScreen() {
                       <button
                         key={day.toISOString()}
                         onClick={() => handleDateClick(day)}
+                        disabled={isFuture}
                         className="aspect-square rounded-2xl transition-transform active:scale-[0.98]"
                         style={{
                           border: 'none',
                           background: (today || hasItems) ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.06)',
                           position: 'relative',
                           overflow: 'hidden',
+                          opacity: isFuture ? 0.4 : 1,
+                          cursor: isFuture ? 'not-allowed' : 'pointer',
                         }}
                         aria-label={`${t('health.calendar.title')} ${format(day, 'yyyy-MM-dd')}`}
                       >
@@ -734,11 +871,6 @@ export default function HealthTimelineScreen() {
                                   {item.title}
                                 </div>
 
-                                {item.type === 'symptom' && item.subtitle && (
-                                  <div className="text-xs mt-1" style={{ color: 'rgba(74,74,74,0.75)' }}>
-                                    {t('dataView.severity')} {t(`severity.${item.subtitle}`)}
-                                  </div>
-                                )}
 
                                 {item.type === 'record' && item.subtitle && (
                                   <div className="text-xs mt-1" style={{ color: 'rgba(74,74,74,0.75)' }}>
@@ -753,27 +885,8 @@ export default function HealthTimelineScreen() {
                                 )}
                               </div>
 
+                              {/* Show delete button for all items, no edit button */}
                               <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEdit(item);
-                                  }}
-                                  className="touch-target rounded-full flex items-center justify-center"
-                                  style={{
-                                    width: 44,
-                                    height: 44,
-                                    background: GLASS_BG,
-                                    border: '1px solid rgba(255, 255, 255, 0.55)',
-                                    backdropFilter: GLASS_BLUR,
-                                    WebkitBackdropFilter: GLASS_BLUR,
-                                    color: TEXT,
-                                  }}
-                                  aria-label={t('common.edit')}
-                                  title={t('common.edit')}
-                                >
-                                  <Pencil size={18} strokeWidth={2} />
-                                </button>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -781,6 +894,7 @@ export default function HealthTimelineScreen() {
                                       type: item.type,
                                       id: item.id,
                                       title: item.title,
+                                      associatedSymptomEntryId: item.type === 'record' ? item.associatedSymptomEntryId : undefined,
                                     });
                                   }}
                                   className="touch-target rounded-full flex items-center justify-center"
@@ -880,7 +994,8 @@ export default function HealthTimelineScreen() {
 
                     return (
                       <div key={`${item.type}-${item.id}`}>
-                        {isNewDay && (
+                        {/* Only show date header if NOT in Day Detail View (selectedDate is null) */}
+                        {isNewDay && !selectedDate && (
                           <div className="px-2 mb-2">
                             <div className="text-xs font-semibold" style={{ color: 'rgba(74,74,74,0.8)' }}>
                               {format(date, locale === 'zh' ? 'yyyy年MM月dd日' : 'EEEE, MMMM d, yyyy')}
@@ -934,11 +1049,6 @@ export default function HealthTimelineScreen() {
                                 {item.title}
                               </div>
 
-                              {item.type === 'symptom' && item.subtitle && (
-                                <div className="text-xs mt-1" style={{ color: 'rgba(74,74,74,0.75)' }}>
-                                  {t('dataView.severity')} {t(`severity.${item.subtitle}`)}
-                                </div>
-                              )}
 
                               {item.type === 'record' && item.subtitle && (
                                 <div className="text-xs mt-1" style={{ color: 'rgba(74,74,74,0.75)' }}>
@@ -953,27 +1063,8 @@ export default function HealthTimelineScreen() {
                               )}
                             </div>
 
+                            {/* Show delete button for all items, no edit button */}
                             <div className="flex items-center gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(item);
-                                }}
-                                className="touch-target rounded-full flex items-center justify-center"
-                                style={{
-                                  width: 44,
-                                  height: 44,
-                                  background: GLASS_BG,
-                                  border: '1px solid rgba(255, 255, 255, 0.55)',
-                                  backdropFilter: GLASS_BLUR,
-                                  WebkitBackdropFilter: GLASS_BLUR,
-                                  color: TEXT,
-                                }}
-                                aria-label={t('common.edit')}
-                                title={t('common.edit')}
-                              >
-                                <Pencil size={18} strokeWidth={2} />
-                              </button>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -981,6 +1072,7 @@ export default function HealthTimelineScreen() {
                                     type: item.type,
                                     id: item.id,
                                     title: item.title,
+                                    associatedSymptomEntryId: item.type === 'record' ? item.associatedSymptomEntryId : undefined,
                                   });
                                 }}
                                 className="touch-target rounded-full flex items-center justify-center"
@@ -1013,10 +1105,14 @@ export default function HealthTimelineScreen() {
       {/* Fixed bottom action button - hide only when showing empty state with button */}
       {!(!loading && timelineItems.length === 0 && !selectedDate && entries.length === 0 && records.length === 0) && (
         <div
-          className="fixed bottom-0 left-0 right-0 z-40 px-5 pb-4"
-          style={{ paddingBottom: `calc(1rem + env(safe-area-inset-bottom))` }}
+          className="fixed bottom-0 left-0 right-0 z-40 w-full"
+          style={{ 
+            paddingBottom: `calc(1rem + env(safe-area-inset-bottom))`,
+            paddingLeft: '20px',
+            paddingRight: '20px',
+          }}
         >
-          <div className="max-w-md mx-auto">
+          <div className="w-full">
             <button
               className="touch-target w-full font-semibold"
               style={{
@@ -1029,7 +1125,14 @@ export default function HealthTimelineScreen() {
                 boxShadow: '0 16px 40px rgba(255,126,157,0.18)',
                 color: TEXT,
               }}
-              onClick={() => navigate('/health/symptoms')}
+              onClick={() => {
+                // If viewing a specific date, pass it as a parameter
+                if (selectedDate) {
+                  navigate(`/health/symptoms?date=${selectedDate}`);
+                } else {
+                  navigate('/health/symptoms');
+                }
+              }}
             >
               {t('health.timeline.logNewSymptom')}
             </button>
@@ -1046,7 +1149,7 @@ export default function HealthTimelineScreen() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="relative w-full max-w-md rounded-t-3xl p-5"
+            className="relative w-full rounded-t-3xl p-5"
             style={{
               background: GLASS_BG,
               backdropFilter: GLASS_BLUR,
@@ -1078,9 +1181,9 @@ export default function HealthTimelineScreen() {
                 const date = subDays(new Date(), i);
                 const dateStr = format(date, 'yyyy-MM-dd');
                 const isSelected = selectedDate === dateStr;
-                // Check if this date has any entries or records
+                // Check if this date has any entries or records (only image records count)
                 const dateHasEntries = entries.some(e => format(parseISO(e.loggedDate), 'yyyy-MM-dd') === dateStr);
-                const dateHasRecords = records.some(r => format(parseISO(r.uploadDate), 'yyyy-MM-dd') === dateStr);
+                const dateHasRecords = records.some(r => format(parseISO(r.uploadDate), 'yyyy-MM-dd') === dateStr && r.fileType === 'image');
                 const hasItems = dateHasEntries || dateHasRecords;
                 
                 return (
@@ -1132,7 +1235,7 @@ export default function HealthTimelineScreen() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setDeleteConfirm(null)} />
           <div
-            className="relative w-full max-w-md rounded-3xl p-5"
+            className="relative w-full rounded-3xl p-5"
             style={{
               background: GLASS_BG,
               backdropFilter: GLASS_BLUR,

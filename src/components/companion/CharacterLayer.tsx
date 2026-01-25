@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
+import { CharacterMood } from '../../types';
+import { getCharacterConfig } from '../../config/characters';
 
 interface CharacterLayerProps {
-  imageUrl: string | string[]; // Support single URL or array of fallback URLs
+  imageUrl?: string | string[]; // Support single URL or array of fallback URLs (optional if using mood)
+  characterId?: string; // Character ID for mood-based illustration lookup
+  mood?: CharacterMood; // Character mood for mood-specific illustration (per FR-003, FR-011)
   resizeMode?: 'cover' | 'contain';
   alt?: string;
 }
@@ -16,6 +20,8 @@ interface CharacterLayerProps {
  */
 export default function CharacterLayer({
   imageUrl,
+  characterId,
+  mood,
   resizeMode = 'cover',
   alt = 'Character illustration',
 }: CharacterLayerProps) {
@@ -24,8 +30,17 @@ export default function CharacterLayer({
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [currentUrlIndex, setCurrentUrlIndex] = useState(0);
 
+  // Get mood-specific illustration URL if characterId and mood provided
+  let resolvedImageUrl = imageUrl;
+  if (characterId && mood) {
+    const config = getCharacterConfig(characterId);
+    if (config && config.illustrationUrls[mood]) {
+      resolvedImageUrl = config.illustrationUrls[mood];
+    }
+  }
+
   // Normalize imageUrl to array
-  const imageUrls = Array.isArray(imageUrl) ? imageUrl : [imageUrl];
+  const imageUrls = Array.isArray(resolvedImageUrl) ? resolvedImageUrl : (resolvedImageUrl ? [resolvedImageUrl] : []);
   const currentUrl = imageUrls[currentUrlIndex];
 
   useEffect(() => {

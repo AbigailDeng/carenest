@@ -10,7 +10,7 @@ import {
   addMonths,
   subMonths,
 } from 'date-fns';
-import { ChevronLeft, Calendar, ClipboardList, HeartPulse } from 'lucide-react';
+import { ChevronLeft, Calendar, HeartPulse } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ErrorBoundary from './ErrorBoundary';
 import SettingsDrawer from './SettingsDrawer';
@@ -19,14 +19,10 @@ import Card from './Card';
 import { useOffline } from '../../hooks/useOffline';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useFoodReflection } from '../../hooks/useFoodReflection';
-import { useCompanion } from '../../hooks/useCompanion';
 import { FoodReflection, MealType } from '../../types';
-import CharacterLayer from '../companion/CharacterLayer';
-import SceneBackground from '../companion/SceneBackground';
 import FloatingParticles from '../companion/FloatingParticles';
 import ImageBackground from '../shared/ImageBackground';
 import HealthUploadScreen from '../health/HealthUploadScreen';
-import HealthSummaryScreen from '../health/HealthSummaryScreen';
 import LifestyleSuggestionsScreen from '../health/LifestyleSuggestionsScreen';
 import SymptomLogScreen from '../health/SymptomLogScreen';
 import SymptomAnalysisScreen from '../health/SymptomAnalysisScreen';
@@ -50,35 +46,16 @@ function Layout() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const isHome = location.pathname === '/';
-  const isHealthHome = location.pathname === '/health';
-  const isHealthCalendar = location.pathname === '/health/calendar';
-  const isHealthTimeline = location.pathname.startsWith('/health/timeline');
-  const isImmersive = isHome || isHealthHome || isHealthCalendar || isHealthTimeline;
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [previousPath, setPreviousPath] = useState<string>('/health');
 
-  // Save current path when opening drawer
-  const handleOpenDrawer = () => {
-    // Only save if not already in privacy route
-    if (!location.pathname.startsWith('/privacy')) {
-      setPreviousPath(location.pathname);
-    }
-    setSettingsOpen(true);
-  };
-
-  // Restore previous path when closing drawer
+  // Close drawer handler
   const handleCloseDrawer = () => {
     setSettingsOpen(false);
-    // Navigate back to previous path if we're in privacy route
-    if (location.pathname.startsWith('/privacy')) {
-      navigate(previousPath, { replace: true });
-    }
   };
 
   return (
     <ErrorBoundary>
-      <div className={`min-h-screen flex flex-col ${isImmersive ? 'bg-transparent' : 'bg-clay-bg'}`}>
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'transparent' }}>
         {/* Offline indicator */}
         {isOffline && (
           <div className="bg-clay-warning rounded-b-[20px] px-4 py-3 text-center text-sm text-white font-body shadow-clay">
@@ -88,13 +65,7 @@ function Layout() {
 
 
         {/* Main content area */}
-        <main
-          className={
-            isImmersive
-              ? 'flex-1 w-full overflow-hidden'
-              : 'flex-1 overflow-y-auto max-w-md mx-auto w-full bg-clay-bg pb-24 px-2'
-          }
-        >
+        <main className="flex-1 w-full overflow-hidden" style={{ backgroundColor: 'transparent' }}>
           <Routes>
             {/* Home screen with character and entry cards */}
             <Route path="/" element={<HomeScreen />} />
@@ -102,7 +73,6 @@ function Layout() {
             {/* Health routes */}
             <Route path="/health" element={<HealthHomeScreen />} />
             <Route path="/health/upload" element={<HealthUploadScreen />} />
-            <Route path="/health/summary/:id" element={<HealthSummaryScreen />} />
             <Route path="/health/lifestyle/:recordId" element={<LifestyleSuggestionsScreen />} />
             <Route path="/health/symptoms" element={<SymptomLogScreen />} />
             <Route path="/health/symptoms/edit/:id" element={<SymptomLogScreen />} />
@@ -144,12 +114,6 @@ function Layout() {
 function HealthHomeScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  useCompanion('baiqi');
-
-  // Health page character illustration - use specified image
-  const characterLayerUrls = [
-    '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp',
-  ];
 
   // Ref: FR-030B (enhanced) + user request: higher-end glass
   const GLASS_BG = 'rgba(255, 255, 255, 0.2)';
@@ -165,23 +129,12 @@ function HealthHomeScreen() {
   // Centralized absolute stacking (NOT a vertical list)
   const cards = [
     {
-      id: 'folder-upload',
-      label: t('health.uploadRecord'),
-      route: '/health/upload',
-      icon: ClipboardList,
-      rotate: -1.5,
-      bottom: '6%',
-      zIndex: 3,
-      floatDelay: 0.0,
-      floatDuration: 4.2,
-    },
-    {
       id: 'folder-symptoms',
       label: t('health.logSymptoms'),
       route: '/health/symptoms',
       icon: HeartPulse,
       rotate: 4,
-      bottom: '16%',
+      bottom: '6%',
       zIndex: 2,
       floatDelay: 0.2,
       floatDuration: 5.1,
@@ -192,7 +145,7 @@ function HealthHomeScreen() {
       route: '/health/timeline?view=calendar',
       icon: Calendar,
       rotate: -3,
-      bottom: '26%',
+      bottom: '18%',
       zIndex: 1,
       floatDelay: 0.4,
       floatDuration: 6.0,
@@ -207,30 +160,18 @@ function HealthHomeScreen() {
     }, 400);
   };
 
-  // Background image URL (same as home screen) - FR-036(1)
-  const HOME_SCREEN_BACKGROUND_URL = 'https://i.pinimg.com/564x/a6/39/19/a639190333210fb5da77b4903661354e.jpg';
+  // Background image URL - use specified character illustration
+  const HOME_SCREEN_BACKGROUND_URL = '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
 
   return (
-    <ImageBackground imageUrl={HOME_SCREEN_BACKGROUND_URL}>
-      <div className="relative min-h-screen overflow-hidden">
-        {/* Scene Background - FR-036(1) */}
-        <div className="absolute inset-0" style={{ zIndex: 1 }}>
-          <SceneBackground characterId="baiqi" />
-        </div>
+    <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+      {/* ImageBackground - 最底层唯一的白起立绘 */}
+      <ImageBackground imageUrl={HOME_SCREEN_BACKGROUND_URL} />
 
-        {/* Floating Particles - FR-036(1) */}
-        <div className="absolute inset-0" style={{ zIndex: 2 }}>
-          <FloatingParticles count={20} />
-        </div>
-
-        {/* Full-screen character illustration background with breathing animation - reuse home screen URLs */}
-        <div className="fixed inset-0" style={{ zIndex: 3 }}>
-          <CharacterLayer
-            imageUrl={characterLayerUrls}
-            resizeMode="cover"
-            alt="Bai Qi character background"
-          />
-        </div>
+      {/* Floating Particles - FR-036(1) */}
+      <div className="absolute inset-0" style={{ zIndex: 2 }}>
+        <FloatingParticles count={20} />
+      </div>
 
       {/* Large-sized back button - top-left corner - FR-035(7) & FR-036(4) */}
       <motion.button
@@ -366,8 +307,7 @@ function HealthHomeScreen() {
           </p>
         </div>
       </div>
-      </div>
-    </ImageBackground>
+    </div>
   );
 }
 

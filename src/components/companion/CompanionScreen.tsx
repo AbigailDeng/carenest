@@ -453,8 +453,8 @@ export default function CompanionScreen() {
 
   return (
     <div className="relative min-h-screen flex flex-col" style={{ background: '#FDEEF4' }}>
-      {/* Scene Background */}
-      <SceneBackground characterId={CHARACTER_ID} />
+      {/* Scene Background with mood variations (per FR-025) */}
+      <SceneBackground characterId={CHARACTER_ID} mood={characterState?.mood} />
 
       {/* T081: Floating light particles */}
       <FloatingParticles count={15} />

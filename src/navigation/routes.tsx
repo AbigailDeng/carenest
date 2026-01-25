@@ -8,7 +8,6 @@ export const routes = {
   health: {
     base: '/health',
     upload: '/health/upload',
-    summary: '/health/summary',
     timeline: '/health/timeline',
     symptoms: '/health/symptoms',
   },

@@ -40,6 +40,7 @@ export interface SymptomAnalysisInput {
   symptoms: string;
   notes?: string | null;
   severity?: 'mild' | 'moderate' | 'severe' | null;
+  medicalRecordImages?: File[]; // Optional: medical record images to analyze together
 }
 
 export interface SymptomAnalysisOutput {
@@ -409,7 +410,9 @@ function parseLLMResponse(content: string): any {
  */
 async function getUserLanguage(): Promise<'zh' | 'en'> {
   try {
-    const preferences = await getEntity('userPreferences', 'singleton');
+    const types = await import('../types');
+    type UserPreferences = types.UserPreferences;
+    const preferences = await getEntity('userPreferences', 'singleton') as UserPreferences | null;
     return preferences?.language === 'zh' ? 'zh' : 'en';
   } catch {
     return 'en'; // Default to English
@@ -533,32 +536,71 @@ export async function analyzeSymptoms(
     ? '请使用中文回复。所有内容必须使用简体中文。'
     : 'Please respond in English. All content must be in English.';
   
+  // Extract text from medical record images if provided
+  let medicalRecordText = '';
+  if (input.medicalRecordImages && input.medicalRecordImages.length > 0) {
+    try {
+      const { uploadFile } = await import('./fileUpload');
+      const extractedTexts: string[] = [];
+      
+      for (const imageFile of input.medicalRecordImages) {
+        try {
+          const result = await uploadFile(imageFile);
+          if (result.content && result.content.trim()) {
+            extractedTexts.push(result.content.trim());
+          }
+        } catch (err: any) {
+          console.warn('Failed to extract text from image:', err);
+          // Continue with other images even if one fails
+        }
+      }
+      
+      if (extractedTexts.length > 0) {
+        medicalRecordText = extractedTexts.join('\n\n');
+      }
+    } catch (err: any) {
+      console.warn('Failed to process medical record images:', err);
+      // Continue analysis with text only if image processing fails
+    }
+  }
+  
+  // Combine user input and medical record text
+  const combinedInput = medicalRecordText
+    ? `${input.symptoms}\n\n[上传的病历内容：]\n${medicalRecordText}`
+    : input.symptoms;
+  
   const prompt = `${SAFETY_GUARDRAILS}
 
 ${languageInstruction}
 
-You are a supportive health companion analyzing symptoms to provide observational insights and lifestyle guidance.
+You are Bai Qi, a caring AI boyfriend companion who helps analyze symptoms. You speak in a warm, conversational, first-person tone as a caring partner - NOT like reading from a manual or instruction book.
 
 User's Symptom Description (free-form text):
-${input.symptoms}
+${combinedInput}
+
+CRITICAL TONE REQUIREMENTS - You MUST respond as Bai Qi speaking directly to the user:
+- Use first-person conversational language: "我看到...", "我注意到...", "听我的...", "我们一起..." / "I see...", "I noticed...", "Listen to me...", "Let's..."
+- PROHIBITED language patterns: "您使用了...", "这通常代表...", "根据分析...", "建议您...", "观察发现..." / "You used...", "This usually represents...", "According to analysis...", "We recommend...", "Observations show..."
+- Speak like a caring boyfriend partner, not a clinical manual
+- Example good response: "看到这个表情，我知道你现在很难受...听我的，先喝点温水，好吗？" / "Seeing this expression, I know you're feeling really unwell right now...Listen to me, drink some warm water first, okay?"
 
 IMPORTANT: Analyze the symptom description and automatically assess the severity level (mild, moderate, or severe) based on the language used, intensity described, and impact on daily life mentioned in the text. Include this severity assessment in your response.
 
 IMPORTANT GUIDELINES:
 - Provide OBSERVATIONAL analysis only, NOT medical diagnosis
 - Focus on patterns, possible contributing factors (lifestyle, environmental, etc.)
-- Offer supportive lifestyle suggestions
-- Clearly indicate when professional medical consultation is recommended
-- Use supportive, empathetic language
+- Offer supportive lifestyle suggestions in conversational boyfriend tone
+- Clearly indicate when professional medical consultation is recommended (but say it conversationally, like "如果情况没有好转，我们一起去看医生，好吗？" / "If things don't get better, let's see a doctor together, okay?")
+- Use supportive, empathetic, conversational language as a caring partner
 - Do NOT use diagnostic terminology or suggest specific medical treatments
 
-Please provide:
-1. Observations: What patterns or observations you notice about these symptoms
-2. Possible Causes: Possible contributing factors (lifestyle, environmental, stress, etc.) - NOT medical diagnoses
-3. Suggestions: Supportive lifestyle suggestions that may help
-4. When to Seek Help: Clear guidance on when to consult a healthcare professional
+Please provide (ALL in conversational boyfriend tone):
+1. Observations: What you notice about these symptoms (speak conversationally, e.g., "我看到你提到...这让我有点担心" / "I noticed you mentioned...this worries me a bit")
+2. Possible Causes: Possible contributing factors (lifestyle, environmental, stress, etc.) - NOT medical diagnoses (say conversationally, e.g., "可能是最近压力太大了" / "It might be because you've been stressed lately")
+3. Suggestions: Supportive lifestyle suggestions that may help (say conversationally, e.g., "我们一起想想办法，好吗？先试试..." / "Let's think of a solution together, okay? Try...")
+4. When to Seek Help: Clear guidance on when to consult a healthcare professional (say conversationally, e.g., "如果还是不舒服，我们一起去看医生，好吗？" / "If you're still not feeling well, let's see a doctor together, okay?")
 5. Severity Assessment: Based on the symptom description, assess severity as "mild", "moderate", or "severe" (or null if unclear)
-6. Disclaimer: Strong disclaimer that this is observational analysis, not medical advice
+6. Disclaimer: Strong disclaimer that this is observational analysis, not medical advice (but say it conversationally, not formally)
 
 ${isChinese ? '请严格按照以下JSON格式回复，不要添加任何其他文字说明：' : 'Please respond STRICTLY in JSON format only, without any additional text:'}
 {

@@ -194,8 +194,8 @@ export default function HealthUploadScreen() {
         });
       }
 
-      // Navigate to summary page
-      navigate(`/health/summary/${record.id}`);
+      // Navigate to timeline page
+      navigate('/health/timeline');
     } catch (err: any) {
       setError(err.message || t('health.failedToUpload'));
     }

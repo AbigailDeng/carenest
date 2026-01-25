@@ -88,7 +88,17 @@ export default function ConversationBubble({
           background: 'rgba(255, 255, 255, 0.4)',
           backdropFilter: 'blur(30px)',
           borderRadius: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.55)',
+          border: `1px solid ${
+            isCharacter && characterState?.mood
+              ? characterState.mood === 'happy'
+                ? 'rgba(255, 182, 193, 0.6)' // Pink tint for happy
+                : characterState.mood === 'concerned'
+                ? 'rgba(255, 200, 87, 0.5)' // Warm yellow tint for concerned
+                : characterState.mood === 'energetic'
+                ? 'rgba(147, 197, 253, 0.5)' // Blue tint for energetic
+                : 'rgba(255, 255, 255, 0.55)' // Default white
+              : 'rgba(255, 255, 255, 0.55)'
+          }`,
           boxShadow: '0 10px 40px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(255, 209, 220, 0.18)',
           color: '#4A4A4A',
           fontFamily: "'Montserrat', 'PingFang SC', 'PingFang Light', sans-serif",

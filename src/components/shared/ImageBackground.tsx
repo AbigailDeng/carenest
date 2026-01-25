@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface ImageBackgroundProps {
   imageUrl: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 }
 
@@ -19,39 +19,105 @@ export default function ImageBackground({
   children,
   className = '',
 }: ImageBackgroundProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    // Reset states when imageUrl changes
+    setImageLoaded(false);
+    setImageError(false);
+    
+    const img = new Image();
+    img.src = imageUrl;
+    
+    let isMounted = true;
+    
+    img.onload = () => {
+      if (isMounted) {
+        console.log('[ImageBackground] Image loaded successfully:', imageUrl);
+        setImageLoaded(true);
+        setImageError(false);
+      }
+    };
+    
+    img.onerror = () => {
+      if (isMounted) {
+        console.error('[ImageBackground] Failed to load background image:', imageUrl);
+        setImageError(true);
+        setImageLoaded(false);
+      }
+    };
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [imageUrl]);
+
   return (
     <div
-      className={`fixed inset-0 w-full h-full ${className}`}
+      className={`fixed w-full h-full ${className}`}
       style={{
-        zIndex: 0,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        minHeight: '100vh',
+        zIndex: 0, // Background layer - behind all content but above body background
+        backgroundColor: 'transparent', // No fallback color - let background image show through
+        overflow: 'hidden', // Prevent any overflow that might show default background
+        margin: 0,
+        padding: 0,
+        pointerEvents: 'none', // Allow clicks to pass through to content
       }}
     >
-      {/* Background Image Layer */}
+      {/* Background Image Layer - must cover entire viewport with breathing animation */}
       <div
-        className="absolute inset-0 w-full h-full"
         style={{
-          backgroundImage: `url(${imageUrl})`,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          minHeight: '100vh',
+          backgroundImage: imageError ? 'none' : `url(${imageUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          // Ensure image covers entire screen without gaps
-          minWidth: '100vw',
-          minHeight: '100vh',
+          opacity: imageError ? 0 : (imageLoaded ? 1 : 1), // Show immediately, full opacity when loaded
+          transition: 'opacity 0.5s ease-in-out',
+          zIndex: 0,
+          animation: 'breathingAnimation 7s ease-in-out infinite',
+          transformOrigin: 'center center',
+          margin: 0,
+          padding: 0,
         }}
       />
+      
+      {/* Breathing Animation Keyframes */}
+      <style>{`
+        @keyframes breathingAnimation {
+          0%, 100% {
+            transform: scale(1.0) translateY(0px);
+          }
+          50% {
+            transform: scale(1.03) translateY(-10px);
+          }
+        }
+      `}</style>
 
-      {/* White Gradient Overlay (transparent at top → white at bottom) */}
+      {/* White Gradient Overlay (transparent at top → white at bottom) - minimal overlay to preserve image visibility */}
       <div
         className="absolute inset-0 w-full h-full"
         style={{
           background:
-            'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.3) 50%, rgba(255, 255, 255, 0.7) 100%)',
+            'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.15) 100%)',
           pointerEvents: 'none', // Allow clicks to pass through
         }}
       />
 
-      {/* Content Layer */}
-      <div className="relative z-10 w-full h-full">{children}</div>
+      {/* Content Layer - only render if children provided */}
+      {children && <div className="relative z-10 w-full h-full">{children}</div>}
     </div>
   );
 }
