@@ -1,0 +1,32 @@
+# CareNest Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-01-26
+
+## Active Technologies
+- IndexedDB (local browser storage) for conversation history and character state (003-companion-ui-polish)
+
+- TypeScript 5.x, React 18.x (003-companion-ui-polish)
+
+## Project Structure
+
+```text
+backend/
+frontend/
+tests/
+```
+
+## Commands
+
+npm test && npm run lint
+
+## Code Style
+
+TypeScript 5.x, React 18.x: Follow standard conventions
+
+## Recent Changes
+- 003-companion-ui-polish: Added TypeScript 5.x, React 18.x
+
+- 003-companion-ui-polish: Added TypeScript 5.x, React 18.x
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

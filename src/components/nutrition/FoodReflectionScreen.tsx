@@ -1,20 +1,33 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, Leaf, Utensils, Coffee, Droplet } from 'lucide-react';
 import { useFoodReflection } from '../../hooks/useFoodReflection';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useOffline } from '../../hooks/useOffline';
+import { useCompanion } from '../../hooks/useCompanion';
 import { FoodReflectionType, FoodReflectionAnalysis, MealType } from '../../types';
-import Card from '../shared/Card';
-import Button from '../shared/Button';
 import AIIndicator from '../shared/AIIndicator';
+import ImageBackground from '../shared/ImageBackground';
+import FloatingParticles from '../companion/FloatingParticles';
+import CharacterAvatar from '../companion/CharacterAvatar';
 
 export default function FoodReflectionScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const isOffline = useOffline();
+  const { characterState } = useCompanion('baiqi');
   const { reflection, loading, analyzeReflection, saveReflection, getReflectionForDateAndMeal } =
     useFoodReflection();
+
+  // Background image URL - nutrition-specific Bai Qi illustration
+  const BACKGROUND_URL = '/images/008fP45sly1hreaeb88b2j323s35s1l1.jpg';
+
+  // Premium glassmorphism constants - improved readability
+  const GLASS_BG = 'rgba(255, 255, 255, 0.85)'; // Increased opacity for better readability
+  const GLASS_BLUR = 'blur(10px)'; // Reduced blur for clearer text
+  const GLASS_BORDER = '1px solid rgba(255, 255, 255, 0.6)';
+  const GLASS_SHADOW = '0 2px 12px rgba(0, 0, 0, 0.1)';
 
   // Get mealType from URL params or default to current meal based on time
   const getDefaultMealType = (): MealType => {
@@ -75,7 +88,6 @@ export default function FoodReflectionScreen() {
     try {
       setAnalyzing(true);
       setError(null);
-      // Clear previous analysis results before starting new analysis
       setLocalAiAnalysis(null);
       const aiAnalysis = await analyzeReflection(selectedType, selectedMealType, notes || null);
       setLocalAiAnalysis(aiAnalysis);
@@ -104,7 +116,6 @@ export default function FoodReflectionScreen() {
       );
       setSaved(true);
 
-      // Trigger custom event to notify calendar components to refresh
       window.dispatchEvent(
         new CustomEvent('foodReflectionSaved', {
           detail: { date: selectedDate, mealType: selectedMealType },
@@ -117,327 +128,431 @@ export default function FoodReflectionScreen() {
     }
   };
 
+  // Meal type icons mapping
+  const mealTypeIcons = {
+    breakfast: Coffee,
+    lunch: Utensils,
+    dinner: Utensils,
+    snack: Droplet,
+  };
+
+  // Reflection type icons mapping (replacing emoji)
+  const reflectionTypeIcons = {
+    light: Leaf,
+    normal: Utensils,
+    indulgent: Utensils,
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <p className="text-gray-600 font-body">{t('common.loading')}</p>
+      <div className="relative min-h-screen" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+        <ImageBackground imageUrl={BACKGROUND_URL} />
+        <div className="relative flex items-center justify-center z-10" style={{ minHeight: '100vh' }}>
+          <div className="text-center">
+            <p className="text-gray-600" style={{ color: '#4A4A4A' }}>{t('common.loading')}</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pb-20">
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-heading text-gray-900 mb-3">
-            {t('nutrition.record.title')}
-          </h1>
-          <p className="text-gray-600 font-body text-base leading-relaxed">
-            {t('nutrition.record.description')}
-          </p>
-        </div>
+    <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0, background: 'transparent' }}>
+      {/* ImageBackground - nutrition-specific Bai Qi illustration */}
+      <ImageBackground imageUrl={BACKGROUND_URL} />
 
-        {/* Meal type selection */}
-        <Card className="mb-6 bg-white shadow-lg border-0">
-          <label className="block mb-4 text-base font-semibold text-gray-800 font-body">
-            {t('nutrition.record.mealTypeLabel')}
-          </label>
-          <div className="grid grid-cols-4 gap-2">
-            {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(mealType => (
-              <button
-                key={mealType}
-                onClick={() => {
-                  setSelectedMealType(mealType);
-                  setLocalAiAnalysis(null);
-                  setSaved(false);
-                }}
-                className={`
-                  touch-target
-                  p-3
-                  rounded-xl
-                  font-body
-                  text-xs
-                  font-medium
-                  transition-all
-                  duration-200
-                  ${
-                    selectedMealType === mealType
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:border-blue-300'
-                  }
-                `}
-              >
-                {t(`nutrition.record.mealType.${mealType}`)}
-              </button>
-            ))}
-          </div>
-        </Card>
+      {/* Floating Particles */}
+      <div className="absolute inset-0" style={{ zIndex: 2 }}>
+        <FloatingParticles count={20} />
+      </div>
 
-        {/* Three large reflection buttons */}
-        <div className="grid grid-cols-1 gap-4 mb-6">
-          <button
-            onClick={() => setSelectedType('light')}
-            className={`
-              w-full
-              p-6
-              text-left
-              rounded-2xl
-              transition-all
-              duration-200
-              min-h-[140px]
-              ${
-                selectedType === 'light'
-                  ? 'bg-green-50 border-4 border-green-500 shadow-lg'
-                  : 'bg-white hover:bg-gray-50 border-2 border-gray-200 shadow-md hover:shadow-lg'
-              }
-            `}
-          >
-            <div className="flex items-center gap-5">
-              <span className="text-5xl">🌱</span>
-              <div>
-                <h3 className="text-xl font-heading text-gray-900 mb-2">
-                  {t('nutrition.record.light')}
-                </h3>
-                <p className="text-sm text-gray-600 font-body leading-relaxed">
-                  {t('nutrition.record.lightDesc')}
-                </p>
-              </div>
-            </div>
-          </button>
+      {/* Glassmorphism back button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="fixed top-5 left-5 z-50 rounded-full flex items-center justify-center transition-all duration-200 touch-target"
+        style={{
+          width: '44px',
+          height: '44px',
+          background: GLASS_BG,
+          backdropFilter: GLASS_BLUR,
+          border: GLASS_BORDER,
+          boxShadow: GLASS_SHADOW,
+          color: '#5A4E4E',
+        }}
+        aria-label={t('common.back')}
+      >
+        <ChevronLeft size={24} strokeWidth={2} />
+      </button>
 
-          <button
-            onClick={() => setSelectedType('normal')}
-            className={`
-              w-full
-              p-6
-              text-left
-              rounded-2xl
-              transition-all
-              duration-200
-              min-h-[140px]
-              ${
-                selectedType === 'normal'
-                  ? 'bg-blue-50 border-4 border-blue-500 shadow-lg'
-                  : 'bg-white hover:bg-gray-50 border-2 border-gray-200 shadow-md hover:shadow-lg'
-              }
-            `}
-          >
-            <div className="flex items-center gap-5">
-              <span className="text-5xl">🍽️</span>
-              <div>
-                <h3 className="text-xl font-heading text-gray-900 mb-2">
-                  {t('nutrition.record.normal')}
-                </h3>
-                <p className="text-sm text-gray-600 font-body leading-relaxed">
-                  {t('nutrition.record.normalDesc')}
-                </p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setSelectedType('indulgent')}
-            className={`
-              w-full
-              p-6
-              text-left
-              rounded-2xl
-              transition-all
-              duration-200
-              min-h-[140px]
-              ${
-                selectedType === 'indulgent'
-                  ? 'bg-purple-50 border-4 border-purple-500 shadow-lg'
-                  : 'bg-white hover:bg-gray-50 border-2 border-gray-200 shadow-md hover:shadow-lg'
-              }
-            `}
-          >
-            <div className="flex items-center gap-5">
-              <span className="text-5xl">✨</span>
-              <div>
-                <h3 className="text-xl font-heading text-gray-900 mb-2">
-                  {t('nutrition.record.indulgent')}
-                </h3>
-                <p className="text-sm text-gray-600 font-body leading-relaxed">
-                  {t('nutrition.record.indulgentDesc')}
-                </p>
-              </div>
-            </div>
-          </button>
-        </div>
-
-        {/* Optional notes field */}
-        <Card className="mb-6 bg-white shadow-lg border-0">
-          <label className="block mb-3 text-base font-semibold text-gray-800 font-body">
-            {t('nutrition.record.notesLabel')}
-          </label>
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder={t('nutrition.record.notesPlaceholder')}
-            className="
-              w-full
-              p-4
-              rounded-xl
-              border border-gray-200
-              bg-gray-50
-              text-gray-900
-              font-body
-              text-base
-              focus:outline-none
-              focus:ring-2
-              focus:ring-blue-500
-              focus:border-blue-500
-              focus:bg-white
-              resize-none
-              min-h-[120px]
-              transition-all
-            "
-            maxLength={500}
+      {/* Character dialogue bubble - positioned at Bai Qi's shoulder level, left-aligned */}
+      <div className="fixed left-0 right-0 z-40 flex justify-start w-full" style={{
+        paddingLeft: '20px',
+        paddingRight: '20px',
+        top: localAiAnalysis ? '80px' : '80px',
+        pointerEvents: localAiAnalysis ? 'auto' : 'none',
+      }}>
+        <div
+          className="flex items-start gap-2 rounded-2xl"
+        style={{
+          background: 'rgba(255, 255, 255, 0.9)', // More opaque for readability
+          backdropFilter: 'blur(8px)', // Reduced blur
+          border: '1px solid rgba(200, 200, 200, 0.5)',
+          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
+          maxWidth: localAiAnalysis ? '85%' : 'max-w-xs',
+          height: localAiAnalysis ? '180px' : 'auto',
+          maxHeight: localAiAnalysis ? '180px' : 'auto',
+          overflow: 'hidden',
+          padding: localAiAnalysis ? '12px' : '8px 12px',
+          pointerEvents: 'auto',
+        }}
+        >
+          <CharacterAvatar
+            characterId="baiqi"
+            characterState={characterState}
+            size="sm"
+            showBadge={false}
           />
-          <p className="text-xs text-gray-500 mt-2 font-body">
-            {notes.length}/500 {t('common.characters')}
-          </p>
-        </Card>
-
-        {/* AI Analysis Display */}
-        {localAiAnalysis && (
-          <Card className="mb-6 bg-blue-50 border border-blue-200 shadow-lg">
-            <div className="flex items-start gap-3 mb-4">
-              <AIIndicator status="completed" />
-              <h3 className="text-lg font-heading text-gray-900">
-                {t('nutrition.record.aiAnalysis')}
-              </h3>
-            </div>
-
-            {/* Encouragement */}
-            <div className="mb-5">
-              <p className="text-gray-900 font-body font-semibold mb-2 text-base">
-                {t('nutrition.record.encouragement')}
-              </p>
-              <p className="text-gray-700 font-body leading-relaxed">
-                {localAiAnalysis.encouragement}
-              </p>
-            </div>
-
-            {/* Suggestions */}
-            {localAiAnalysis.suggestions.length > 0 && (
-              <div className="mb-5">
-                <p className="text-gray-900 font-body font-semibold mb-3 text-base">
-                  {t('nutrition.record.suggestions')}
+          <div className="flex-1 min-w-0" style={{
+            height: localAiAnalysis ? '100%' : 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}>
+            {localAiAnalysis && !analyzing ? (
+              // AI conclusion replaces initial prompt - scrollable content area
+              <div style={{
+                flex: 1,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                WebkitOverflowScrolling: 'touch',
+                paddingRight: '4px',
+              }}>
+                <p className="text-sm font-medium mb-2 leading-relaxed" style={{ color: '#2A2A2A' }}>
+                  {localAiAnalysis.encouragement}
                 </p>
-                <ul className="list-disc list-inside space-y-2">
-                  {localAiAnalysis.suggestions.map((suggestion, idx) => (
-                    <li key={idx} className="text-gray-700 font-body text-sm leading-relaxed">
-                      {suggestion}
-                    </li>
-                  ))}
-                </ul>
+                {localAiAnalysis.suggestions && localAiAnalysis.suggestions.length > 0 && (
+                  <ul className="text-xs space-y-1 font-medium" style={{ color: '#2A2A2A', opacity: 0.9 }}>
+                    {localAiAnalysis.suggestions.map((suggestion: string, index: number) => (
+                      <li key={index} className="flex items-start gap-1 leading-relaxed">
+                        <span>·</span>
+                        <span>{suggestion}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {localAiAnalysis.suitability && (
+                  <p className="text-xs mt-2 font-medium leading-relaxed" style={{ color: '#2A2A2A', opacity: 0.9 }}>
+                    {localAiAnalysis.suitability}
+                  </p>
+                )}
+              </div>
+            ) : (
+              // Initial prompt
+              <p className="text-sm font-medium flex-1" style={{ color: '#2A2A2A' }}>
+                {t('nutrition.reflection.prompt')}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main content area */}
+      <div className="relative z-10 pb-32 min-h-screen w-full" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
+        <div className="w-full" style={{
+          paddingTop: localAiAnalysis ? '280px' : '180px',
+          paddingBottom: '100px',
+        }}>
+          <div className="space-y-4" style={{ gap: '15px' }}>
+            {/* Meal type selection - glassmorphism */}
+            <div
+              className="p-5 rounded-2xl"
+              style={{
+                background: GLASS_BG,
+                backdropFilter: GLASS_BLUR,
+                border: GLASS_BORDER,
+                boxShadow: GLASS_SHADOW,
+                borderRadius: '16px',
+              }}
+            >
+              <label className="block mb-4 text-base font-bold" style={{
+                color: '#2A2A2A', // Darker text for better readability
+                fontWeight: 700,
+              }}>
+                {t('nutrition.record.mealTypeLabel')}
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(mealType => {
+                  const IconComponent = mealTypeIcons[mealType];
+                  return (
+                    <button
+                      key={mealType}
+                      onClick={() => {
+                        setSelectedMealType(mealType);
+                        setLocalAiAnalysis(null);
+                        setSaved(false);
+                      }}
+                      className="touch-target p-3 rounded-xl font-body text-xs font-medium transition-all duration-200"
+                      style={{
+                        background: selectedMealType === mealType
+                          ? 'rgba(255, 126, 157, 0.9)' // Solid background when selected
+                          : 'rgba(255, 255, 255, 0.7)', // More opaque for readability
+                        backdropFilter: selectedMealType === mealType ? 'none' : GLASS_BLUR,
+                        border: selectedMealType === mealType
+                          ? '2px solid rgba(255, 126, 157, 1)'
+                          : '1px solid rgba(200, 200, 200, 0.5)',
+                        color: selectedMealType === mealType ? '#FFFFFF' : '#2A2A2A', // High contrast text
+                        fontWeight: selectedMealType === mealType ? 700 : 500,
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <IconComponent size={18} strokeWidth={2} />
+                        <span>{t(`nutrition.record.mealType.${mealType}`)}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Reflection type buttons - small compact buttons */}
+            <div
+              className="p-5 rounded-2xl"
+              style={{
+                background: GLASS_BG,
+                backdropFilter: GLASS_BLUR,
+                border: GLASS_BORDER,
+                boxShadow: GLASS_SHADOW,
+                borderRadius: '16px',
+              }}
+            >
+              <label className="block mb-3 text-base font-bold" style={{
+                color: '#2A2A2A', // Darker text for better readability
+                fontWeight: 700,
+              }}>
+                {t('nutrition.record.reflectionTypeLabel') || '选择类型'}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['light', 'normal', 'indulgent'] as FoodReflectionType[]).map((type) => {
+                  const IconComponent = reflectionTypeIcons[type];
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => setSelectedType(type)}
+                      className="touch-target p-3 rounded-xl font-body text-xs font-medium transition-all duration-200"
+                      style={{
+                        background: selectedType === type
+                          ? 'rgba(255, 126, 157, 0.9)' // Solid background when selected
+                          : 'rgba(255, 255, 255, 0.7)', // More opaque for readability
+                        backdropFilter: selectedType === type ? 'none' : GLASS_BLUR,
+                        border: selectedType === type
+                          ? '2px solid rgba(255, 126, 157, 1)'
+                          : '1px solid rgba(200, 200, 200, 0.5)',
+                        color: selectedType === type ? '#FFFFFF' : '#2A2A2A', // High contrast text
+                        fontWeight: selectedType === type ? 700 : 500,
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <IconComponent size={20} strokeWidth={2} />
+                        <span>{t(`nutrition.record.${type}`)}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Notes field - glassmorphism */}
+            <div
+              className="p-5 rounded-2xl"
+              style={{
+                background: GLASS_BG,
+                backdropFilter: GLASS_BLUR,
+                border: GLASS_BORDER,
+                boxShadow: GLASS_SHADOW,
+                borderRadius: '16px',
+              }}
+            >
+              <label className="block mb-3 text-base font-bold" style={{
+                color: '#2A2A2A', // Darker text for better readability
+                fontWeight: 700,
+              }}>
+                {t('nutrition.record.notesLabel')}
+              </label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder={t('nutrition.record.notesPlaceholder')}
+                className="w-full px-3 py-2 rounded-lg resize-none focus:outline-none placeholder:opacity-50"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.9)', // More opaque for readability
+                  border: '1px solid rgba(200, 200, 200, 0.5)',
+                  color: '#2A2A2A', // Darker text
+                  fontSize: '16px',
+                }}
+                rows={6}
+                maxLength={500}
+              />
+              <p className="mt-2 text-xs font-medium" style={{ color: '#2A2A2A', opacity: 0.7 }}>
+                {notes.length}/500 {t('common.characters')}
+              </p>
+            </div>
+
+            {/* Analyzing indicator */}
+            {analyzing && (
+              <div
+                className="p-4 rounded-2xl"
+                style={{
+                  background: GLASS_BG,
+                  backdropFilter: GLASS_BLUR,
+                  border: GLASS_BORDER,
+                  boxShadow: GLASS_SHADOW,
+                  borderRadius: '16px',
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <AIIndicator status="processing" />
+                  <p className="text-sm font-medium" style={{ color: '#2A2A2A' }}>
+                    {t('nutrition.record.aiProcessing')}
+                  </p>
+                </div>
               </div>
             )}
 
-            {/* Suitability */}
-            <div className="mb-5">
-              <p className="text-gray-900 font-body font-semibold mb-2 text-base">
-                {t('nutrition.record.suitability')}
-              </p>
-              <p className="text-gray-700 font-body text-sm leading-relaxed">
-                {localAiAnalysis.suitability}
-              </p>
-            </div>
-
-            {/* Disclaimer */}
-            <div className="mt-5 pt-4 border-t border-blue-200">
-              <p className="text-xs text-gray-600 font-body italic">{localAiAnalysis.disclaimer}</p>
-            </div>
-          </Card>
-        )}
-
-        {/* AI Processing Indicator */}
-        {analyzing && (
-          <Card className="mb-6 bg-blue-50 border border-blue-200 shadow-sm">
-            <div className="flex items-center gap-4">
-              <AIIndicator status="processing" />
-              <div>
-                <p className="font-medium text-blue-900 font-body text-base">
-                  {t('nutrition.record.aiProcessing')}
-                </p>
-                <p className="text-sm text-blue-700 font-body">
-                  {t('nutrition.record.aiProcessingNote')}
+            {/* Error message */}
+            {error && (
+              <div
+                className="p-5 rounded-2xl"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  backdropFilter: GLASS_BLUR,
+                  border: GLASS_BORDER,
+                  boxShadow: GLASS_SHADOW,
+                  borderRadius: '16px',
+                }}
+              >
+                <p className="text-sm font-bold" style={{ color: '#DC2626' }}>
+                  {error}
                 </p>
               </div>
+            )}
+
+            {/* Offline message */}
+            {isOffline && !localAiAnalysis && (
+              <div
+                className="p-5 rounded-2xl"
+                style={{
+                  background: 'rgba(234, 179, 8, 0.15)',
+                  backdropFilter: GLASS_BLUR,
+                  border: GLASS_BORDER,
+                  boxShadow: GLASS_SHADOW,
+                  borderRadius: '16px',
+                }}
+              >
+                <p className="text-sm font-bold" style={{ color: '#CA8A04' }}>
+                  {t('nutrition.record.offline')}
+                </p>
+              </div>
+            )}
+
+            {/* Success message */}
+            {saved && !reflection?.aiAnalysis && (
+              <div
+                className="p-5 rounded-2xl"
+                style={{
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  backdropFilter: GLASS_BLUR,
+                  border: GLASS_BORDER,
+                  boxShadow: GLASS_SHADOW,
+                  borderRadius: '16px',
+                }}
+              >
+                <p className="text-sm font-bold" style={{ color: '#16A34A' }}>
+                  {t('nutrition.record.saved')}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Fixed bottom action buttons - equal width, glassmorphism */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 pb-6 pt-4 w-full" style={{ background: 'transparent', paddingLeft: '20px', paddingRight: '20px' }}>
+        <div className="w-full">
+          <div className="flex gap-3">
+            {/* Cancel button */}
+            <div className="flex-1">
+              <button
+                type="button"
+                onClick={() => navigate('/nutrition')}
+                disabled={analyzing || saving}
+                className="w-full px-4 py-3 rounded-xl font-semibold transition-all disabled:opacity-40"
+                style={{
+                  background: GLASS_BG,
+                  backdropFilter: GLASS_BLUR,
+                  border: GLASS_BORDER,
+                  boxShadow: GLASS_SHADOW,
+                  color: '#2A2A2A',
+                  fontWeight: 700,
+                }}
+              >
+                {t('common.cancel')}
+              </button>
             </div>
-          </Card>
-        )}
-
-        {/* Offline warning */}
-        {isOffline && (
-          <Card className="mb-6 bg-yellow-50 border border-yellow-200 shadow-sm">
-            <p className="text-yellow-800 text-sm font-body">{t('nutrition.record.offline')}</p>
-          </Card>
-        )}
-
-        {/* Success message */}
-        {saved && !reflection?.aiAnalysis && (
-          <Card className="mb-6 bg-green-50 border border-green-200 shadow-sm">
-            <p className="text-green-800 font-body">{t('nutrition.record.saved')}</p>
-          </Card>
-        )}
-
-        {/* Error message */}
-        {error && (
-          <Card className="mb-6 bg-red-50 border border-red-200 shadow-sm">
-            <p className="text-red-700 text-sm font-body">{error}</p>
-          </Card>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex flex-col gap-4">
-          <div className="flex gap-4">
-            <Button
-              variant="outline"
-              fullWidth
-              onClick={() => {
-                navigate('/nutrition');
+            {/* Save button - always available when reflection type is selected */}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!selectedType || saving || isOffline}
+              className="flex-1 px-4 py-3 rounded-xl font-semibold transition-all disabled:opacity-40"
+              style={{
+                background: 'rgba(255, 126, 157, 0.9)', // Solid pink background matching selected state
+                color: '#FFFFFF', // White text for high contrast
+                fontWeight: 700,
+                boxShadow: '0 2px 8px rgba(255, 126, 157, 0.4)',
               }}
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              {t('common.back')}
-            </Button>
+              {saving ? t('common.loading') : t('common.save')}
+            </button>
+            {/* AI Analyze button - optional, shown alongside save button */}
             {!localAiAnalysis && (
-              <Button
-                variant="secondary"
-                fullWidth
+              <button
+                type="button"
                 onClick={handleAnalyze}
                 disabled={!selectedType || analyzing || isOffline}
-                className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-3 rounded-xl font-semibold transition-all disabled:opacity-40"
+                style={{
+                  background: GLASS_BG,
+                  backdropFilter: GLASS_BLUR,
+                  border: GLASS_BORDER,
+                  boxShadow: GLASS_SHADOW,
+                  color: '#2A2A2A',
+                  fontWeight: 700,
+                }}
               >
-                {analyzing ? t('common.loading') : t('nutrition.record.aiAnalyze')}
-              </Button>
-            )}
-            {localAiAnalysis && (
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={handleSave}
-                disabled={!selectedType || saving || isOffline}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                {saving ? t('common.loading') : t('common.save')}
-              </Button>
+                {analyzing ? t('nutrition.record.aiProcessing') : t('nutrition.record.aiAnalyze')}
+              </button>
             )}
           </div>
+          {/* Re-analyze button - shown when AI analysis exists */}
           {localAiAnalysis && (
-            <Button
-              variant="outline"
-              fullWidth
-              onClick={handleAnalyze}
-              disabled={analyzing || isOffline}
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              {analyzing ? t('common.loading') : t('nutrition.record.reanalyze')}
-            </Button>
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                disabled={analyzing || isOffline}
+                className="w-full px-4 py-3 rounded-xl font-semibold transition-all disabled:opacity-40"
+                style={{
+                  background: GLASS_BG,
+                  backdropFilter: GLASS_BLUR,
+                  border: GLASS_BORDER,
+                  boxShadow: GLASS_SHADOW,
+                  color: '#2A2A2A',
+                  fontWeight: 700,
+                }}
+              >
+                {analyzing ? t('common.loading') : t('nutrition.record.reanalyze')}
+              </button>
+            </div>
           )}
         </div>
       </div>

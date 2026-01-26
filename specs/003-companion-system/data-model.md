@@ -1,366 +1,277 @@
 # Data Model: Companion Character System
 
-**Date**: 2026-01-23  
-**Feature**: Companion Character System
+**Feature**: 003-companion-system  
+**Date**: 2026-01-25  
+**Status**: Design Phase
 
 ## Overview
 
-This document defines the data models for the companion character system, including character state, conversation messages, character configuration, and storage schemas.
+This document defines the data entities, relationships, and storage schemas for the Companion Character System. All data is stored locally in IndexedDB to maintain privacy and enable offline functionality.
 
-## Core Entities
+## Storage Architecture
+
+**Database**: IndexedDB (browser local storage)  
+**Access Layer**: `src/db.ts` (low-level operations)  
+**Service Layer**: `src/services/storage/` (high-level abstractions)
+
+### IndexedDB Stores
+
+1. **characterStates** - Character relationship and state data
+2. **conversations** - Conversation message history
+3. **characterConfigs** - Character configuration metadata (cached from JSON files)
+
+## Entities
 
 ### CharacterState
 
-Represents the current state of the companion character, including relationship metrics and personality state.
+**Store**: `characterStates`  
+**Key Path**: `id` (character identifier, e.g., "baiqi")
 
 ```typescript
 interface CharacterState {
-  id: string; // Character identifier (e.g., "baiqi")
-  closeness: number; // 0-100, increases with daily interaction
-  mood: CharacterMood; // "happy" | "calm" | "concerned" | "energetic" | "tired"
+  id: string;                    // Character identifier (e.g., "baiqi")
+  closeness: number;             // 0-100, increases with interaction
+  mood: CharacterMood;          // "happy" | "calm" | "concerned" | "energetic" | "tired"
   energy: "low" | "medium" | "high";
-  lastInteractionTime: Date; // ISO 8601 string in storage
-  totalInteractions: number; // Count of all interactions (conversations + acknowledgments)
-  relationshipStage: RelationshipStage; // Derived from closeness level
-  createdAt: Date; // ISO 8601 string in storage
-  updatedAt: Date; // ISO 8601 string in storage
+  lastInteractionTime: Date;    // ISO string format
+  totalInteractions: number;     // Count of all interactions
+  relationshipStage: RelationshipStage; // "stranger" | "acquaintance" | "friend" | "close_friend" | "intimate"
+  createdAt: Date;              // ISO string format
+  updatedAt: Date;              // ISO string format
 }
 
 type CharacterMood = "happy" | "calm" | "concerned" | "energetic" | "tired";
 type RelationshipStage = "stranger" | "acquaintance" | "friend" | "close_friend" | "intimate";
 ```
 
-**Storage**: IndexedDB store `characterState`  
-**Indexes**: `id` (primary key)  
 **Validation Rules**:
-- `closeness` must be between 0 and 100
-- `mood` must be one of defined CharacterMood values
-- `energy` must be one of "low", "medium", "high"
-- `relationshipStage` is derived from `closeness`:
-  - 0-20: "stranger"
-  - 21-40: "acquaintance"
-  - 41-60: "friend"
-  - 61-80: "close_friend"
-  - 81-100: "intimate"
+- `closeness` MUST be between 0 and 100 (inclusive)
+- `mood` MUST be one of the defined CharacterMood values
+- `energy` MUST be one of: "low", "medium", "high"
+- `relationshipStage` MUST be one of the defined RelationshipStage values
+- `id` MUST match a character configuration file in `src/config/characters/`
 
 **State Transitions**:
-- `closeness` increases by 1 per daily interaction (capped at 100)
-- `mood` updates based on user emotional expressions and interaction patterns
-- `energy` updates based on time-of-day (morning: high, afternoon: medium, evening: low)
-- `relationshipStage` automatically updates when `closeness` crosses thresholds
+- `closeness` increases with daily interactions (increment based on interaction type and frequency)
+- `relationshipStage` updates based on `closeness` thresholds (defined in CharacterConfig)
+- `mood` updates based on user interactions, time-of-day, and character energy
+- `energy` updates based on time-of-day and interaction frequency
 
----
+**Indexes**:
+- `id` (primary key)
+- `lastInteractionTime` (for proactive dialogue triggers)
 
 ### ConversationMessage
 
-Represents a single message in the conversation history between user and companion.
+**Store**: `conversations`  
+**Key Path**: `id` (UUID or timestamp-based)
 
 ```typescript
 interface ConversationMessage {
-  id: string; // UUID v4
-  timestamp: Date; // ISO 8601 string in storage
-  characterId: string; // Character identifier (e.g., "baiqi")
+  id: string;                    // UUID or timestamp-based unique identifier
+  characterId: string;          // References CharacterState.id
+  timestamp: Date;               // ISO string format
   sender: "character" | "user";
-  content: string; // Message text content
-  messageType: "text" | "image" | "choice_prompt";
-  choices?: string[]; // For choice-based dialogue (2-5 options)
-  characterImageUrl?: string; // URL to character illustration embedded in message
-  context?: MessageContext; // Character state at time of message
-  metadata?: {
-    isProactive?: boolean; // True if character initiated conversation
-    triggerType?: string; // "morning_greeting" | "evening_greeting" | "inactivity" | "activity_acknowledgment" | "user_initiated"
-    aiGenerated?: boolean; // True if generated by LLM (vs. template)
-    templateId?: string; // Template ID if fallback template used
-  };
+  content: string;               // Message text content
+  messageType: MessageType;      // "text" | "image" | "choice_prompt"
+  choices?: string[];            // For choice-based dialogue (optional)
+  characterImageUrl?: string;    // For embedded character illustrations (optional)
+  context?: ConversationContext; // Character state at time of message (optional)
 }
 
-interface MessageContext {
+type MessageType = "text" | "image" | "choice_prompt";
+
+interface ConversationContext {
   mood: CharacterMood;
   closeness: number;
-  energy: "low" | "medium" | "high";
-  timeOfDay: "morning" | "afternoon" | "evening" | "night";
+  timeOfDay: string;             // "morning" | "afternoon" | "evening" | "night"
   relationshipStage: RelationshipStage;
 }
 ```
 
-**Storage**: IndexedDB store `conversations`  
-**Indexes**: 
+**Validation Rules**:
+- `sender` MUST be either "character" or "user"
+- `messageType` MUST be one of: "text", "image", "choice_prompt"
+- If `messageType` is "choice_prompt", `choices` MUST be present and non-empty array (2-5 choices)
+- `content` MUST be non-empty string
+- `characterId` MUST reference an existing CharacterState.id
+
+**Indexes**:
 - `id` (primary key)
-- `characterId` (for filtering by character)
-- `timestamp` (for chronological queries and pagination)
+- `characterId` (for querying conversation history by character)
+- `timestamp` (for chronological ordering)
 - `characterId + timestamp` (compound index for efficient history queries)
 
-**Validation Rules**:
-- `sender` must be "character" or "user"
-- `messageType` must be "text", "image", or "choice_prompt"
-- If `messageType` is "choice_prompt", `choices` must be present with 2-5 items
-- `content` must not be empty (unless `messageType` is "image" with `characterImageUrl`)
-- `timestamp` must be valid ISO 8601 date
-
-**Query Patterns**:
-- Recent messages for context: `getMessages(characterId, { limit: 10, order: 'desc' })`
-- Conversation history pagination: `getMessages(characterId, { limit: 20, offset: number, order: 'desc' })`
-- Date range: `getMessages(characterId, { startDate: Date, endDate: Date })`
-
----
+**Retention Policy**:
+- Messages stored indefinitely (up to 1 year per NFR-004: 3,650 messages estimated)
+- Users can delete conversation history (NFR-009)
+- Deletion cascades: deleting character state optionally deletes associated messages
 
 ### CharacterConfig
 
-Configuration file for character metadata, dialogue templates, and asset paths. Stored as JSON/YAML files in `src/config/characters/`.
+**Store**: `characterConfigs` (cached from JSON files, not primary storage)  
+**Source**: `src/config/characters/baiqi.json`
 
 ```typescript
 interface CharacterConfig {
-  id: string; // Character identifier (e.g., "baiqi")
-  name: Record<string, string>; // i18n: { "en": "Bai Qi", "zh": "白起" }
-  avatarUrl: string; // Path to avatar image (e.g., "/assets/characters/baiqi/avatar.png")
+  id: string;                    // Character identifier (e.g., "baiqi")
+  name: Record<string, string>;  // i18n: { "en": "Bai Qi", "zh": "白起" }
+  avatarUrl: string;             // Path to avatar image (e.g., "/images/images.jpg")
   illustrationUrls: {
-    default: string;
-    happy: string;
+    default: string;             // Default illustration URL
+    happy: string;               // Mood-specific illustrations
     calm: string;
     concerned: string;
     energetic: string;
     tired: string;
   };
-  backgroundUrls: {
-    morning: string;
-    afternoon: string;
-    evening: string;
-    night: string;
-  };
   dialogueTemplates: {
-    greetings: Record<string, string[]>; // time-of-day → dialogue options
-    responses: Record<string, string[]>; // emotion → dialogue options
-    proactive: Record<string, string[]>; // trigger → dialogue options
+    greetings: Record<string, string[]>;     // time-of-day → dialogue options
+    responses: Record<string, string[]>;     // emotion → dialogue options
+    proactive: Record<string, string[]>;     // trigger → dialogue options
+    dataInterpretation: string[];            // Chart data interpretation templates
   };
   stateThresholds: {
-    closenessStages: Record<RelationshipStage, number>; // stage → min closeness
-    moodInfluences: Record<CharacterMood, {
-      dialogueTone: string; // "warm" | "gentle" | "energetic" | "concerned"
-      proactiveFrequency: number; // Multiplier for proactive initiation (0.5-2.0)
-    }>;
-  };
-  personality: {
-    traits: string[]; // ["empathetic", "supportive", "gentle", "patient"]
-    communicationStyle: string; // "warm" | "casual" | "formal"
+    closenessStages: Record<string, number>; // stage → min closeness value
+    moodInfluences: Record<string, Record<string, number>>; // mood → dialogue tone modifiers
   };
 }
 ```
 
-**Storage**: JSON/YAML files in `src/config/characters/`  
-**Loading**: Loaded at app startup via `src/config/characters/index.ts`  
-**Validation**: TypeScript types ensure structure correctness at compile time
+**Storage Note**: CharacterConfig is primarily stored as JSON files in `src/config/characters/`. IndexedDB cache is optional for performance (load config once, cache for session).
 
-**Example Configuration** (`baiqi.json`):
-```json
-{
-  "id": "baiqi",
-  "name": {
-    "en": "Bai Qi",
-    "zh": "白起"
-  },
-  "avatarUrl": "/assets/characters/baiqi/avatar.png",
-  "illustrationUrls": {
-    "default": "/assets/characters/baiqi/illustrations/default.png",
-    "happy": "/assets/characters/baiqi/illustrations/happy.png",
-    "calm": "/assets/characters/baiqi/illustrations/calm.png",
-    "concerned": "/assets/characters/baiqi/illustrations/concerned.png",
-    "energetic": "/assets/characters/baiqi/illustrations/energetic.png",
-    "tired": "/assets/characters/baiqi/illustrations/tired.png"
-  },
-  "backgroundUrls": {
-    "morning": "/assets/characters/baiqi/backgrounds/morning.png",
-    "afternoon": "/assets/characters/baiqi/backgrounds/afternoon.png",
-    "evening": "/assets/characters/baiqi/backgrounds/evening.png",
-    "night": "/assets/characters/baiqi/backgrounds/night.png"
-  },
-  "dialogueTemplates": {
-    "greetings": {
-      "morning": [
-        "Good morning! How are you feeling today?",
-        "Morning! Ready to start the day together?",
-        "Good morning! I hope you slept well."
-      ],
-      "evening": [
-        "Good evening! How was your day?",
-        "Evening! Let's check in together.",
-        "Good evening! How are you feeling?"
-      ]
-    },
-    "responses": {
-      "sadness": [
-        "I'm here with you. Would you like to talk about what's bothering you?",
-        "I understand. Loneliness can be really hard. Let's work through this together."
-      ],
-      "stress": [
-        "I understand. Stress can be really hard. Would it help to talk about what's on your mind?",
-        "You're not alone in this. Let's take it one step at a time."
-      ]
-    },
-    "proactive": {
-      "inactivity": [
-        "I missed you! How have you been?",
-        "It's been a while. How are you doing?"
-      ],
-      "activity_acknowledgment": [
-        "I saw you logged your symptoms today. That's really good - taking care of yourself is important.",
-        "I noticed you recorded your meal. Great job!"
-      ]
-    }
-  },
-  "stateThresholds": {
-    "closenessStages": {
-      "stranger": 0,
-      "acquaintance": 21,
-      "friend": 41,
-      "close_friend": 61,
-      "intimate": 81
-    },
-    "moodInfluences": {
-      "happy": {
-        "dialogueTone": "warm",
-        "proactiveFrequency": 1.2
-      },
-      "calm": {
-        "dialogueTone": "gentle",
-        "proactiveFrequency": 1.0
-      },
-      "concerned": {
-        "dialogueTone": "gentle",
-        "proactiveFrequency": 0.8
-      },
-      "energetic": {
-        "dialogueTone": "energetic",
-        "proactiveFrequency": 1.5
-      },
-      "tired": {
-        "dialogueTone": "gentle",
-        "proactiveFrequency": 0.6
-      }
-    }
-  },
-  "personality": {
-    "traits": ["empathetic", "supportive", "gentle", "patient"],
-    "communicationStyle": "warm"
-  }
-}
-```
-
----
-
-## Storage Schemas
-
-### IndexedDB: characterState Store
-
-```typescript
-// Store definition
-const characterStateStore = {
-  name: 'characterState',
-  keyPath: 'id',
-  indexes: [
-    { name: 'id', unique: true }
-  ]
-};
-
-// Initial state
-const initialCharacterState: CharacterState = {
-  id: 'baiqi',
-  closeness: 0,
-  mood: 'calm',
-  energy: 'medium',
-  lastInteractionTime: new Date(),
-  totalInteractions: 0,
-  relationshipStage: 'stranger',
-  createdAt: new Date(),
-  updatedAt: new Date()
-};
-```
-
-### IndexedDB: conversations Store
-
-```typescript
-// Store definition
-const conversationsStore = {
-  name: 'conversations',
-  keyPath: 'id',
-  indexes: [
-    { name: 'id', unique: true },
-    { name: 'characterId' },
-    { name: 'timestamp' },
-    { name: 'characterId_timestamp', keyPath: ['characterId', 'timestamp'] }
-  ]
-};
-```
-
----
+**Validation Rules**:
+- `id` MUST be unique across all character configurations
+- `name` MUST have at least one language key (typically "en" and "zh")
+- `illustrationUrls` MUST have at least `default` URL
+- `dialogueTemplates.greetings` MUST have entries for all time-of-day values
+- `stateThresholds.closenessStages` MUST map all RelationshipStage values to numeric thresholds
 
 ## Relationships
 
-### CharacterState ↔ ConversationMessage
+### CharacterState ↔ CharacterConfig
 
-- **One-to-Many**: One `CharacterState` has many `ConversationMessage` records
-- **Relationship**: Messages reference `characterId` to link to character state
-- **Cascade**: Deleting character state should delete all associated messages (or preserve messages but reset state)
+**Type**: One-to-One  
+**Relationship**: CharacterState.id → CharacterConfig.id
 
-### CharacterConfig ↔ CharacterState
+- Each CharacterState references exactly one CharacterConfig
+- CharacterConfig defines the character's appearance, dialogue templates, and state thresholds
+- CharacterState tracks the dynamic relationship state (closeness, mood, etc.)
 
-- **One-to-One**: One `CharacterConfig` defines one `CharacterState`
-- **Relationship**: `CharacterState.id` matches `CharacterConfig.id`
-- **Loading**: Config loaded at startup, state loaded from IndexedDB
+### ConversationMessage → CharacterState
 
----
+**Type**: Many-to-One  
+**Relationship**: ConversationMessage.characterId → CharacterState.id
 
-## Data Migration & Versioning
+- Multiple ConversationMessages belong to one CharacterState
+- Conversation history is scoped to a specific character
+- Deleting CharacterState optionally cascades to ConversationMessages (user choice per NFR-009)
 
-### Version 1.0 (Initial)
+### ConversationMessage.context → CharacterState
 
-- `CharacterState` with basic fields (id, closeness, mood, energy, lastInteractionTime, totalInteractions, relationshipStage)
-- `ConversationMessage` with basic fields (id, timestamp, characterId, sender, content, messageType)
-- No migration needed (initial version)
+**Type**: Snapshot Reference  
+**Relationship**: ConversationMessage.context captures CharacterState at message time
 
-### Future Versions
+- `context` field stores a snapshot of character state when message was created
+- Allows historical analysis of how character state influenced dialogue
+- Not a live reference - context is immutable once message is saved
 
-- Add fields to `CharacterState` or `ConversationMessage` as needed
-- Migration scripts in `src/services/storage/migrations/` following existing CareNest pattern
-- Version tracking via `db.ts` version number
+## Data Access Patterns
 
----
+### Character State Management
 
-## Validation & Constraints
+**Read Pattern**:
+```typescript
+// Get current character state
+const state = await getCharacterState('baiqi');
 
-### CharacterState Constraints
+// Update closeness after interaction
+await updateCloseness('baiqi', 5); // Increment by 5
 
-- `closeness`: 0-100 (inclusive), increments by 1 per daily interaction
-- `mood`: Must be valid `CharacterMood` value
-- `energy`: Must be "low", "medium", or "high"
-- `relationshipStage`: Automatically derived from `closeness`, cannot be manually set
-- `lastInteractionTime`: Must be valid Date, updated on each interaction
-- `totalInteractions`: Non-negative integer, increments on each interaction
+// Update mood based on time-of-day
+await updateCharacterMood('baiqi', 'calm');
+```
 
-### ConversationMessage Constraints
+**Write Pattern**:
+```typescript
+// Save new character state
+await saveCharacterState({
+  id: 'baiqi',
+  closeness: 30,
+  mood: 'happy',
+  energy: 'medium',
+  // ... other fields
+});
+```
 
-- `id`: Must be unique UUID v4
-- `timestamp`: Must be valid Date, cannot be in future
-- `characterId`: Must match existing character config ID
-- `sender`: Must be "character" or "user"
-- `content`: Non-empty string (unless `messageType` is "image" with `characterImageUrl`)
-- `messageType`: Must be "text", "image", or "choice_prompt"
-- `choices`: Required if `messageType` is "choice_prompt", must have 2-5 items
+### Conversation History
 
-### CharacterConfig Constraints
+**Read Pattern**:
+```typescript
+// Get recent conversation history
+const messages = await getConversationHistory('baiqi', 50); // Last 50 messages
 
-- `id`: Must be unique, alphanumeric with underscores/hyphens
-- `name`: Must have at least one language entry
-- `avatarUrl`: Must be valid path to existing asset
-- `illustrationUrls`: Must have all mood variants (default, happy, calm, concerned, energetic, tired)
-- `dialogueTemplates`: Must have at least one template per category (greetings, responses, proactive)
-- `stateThresholds.closenessStages`: Must cover all `RelationshipStage` values
+// Get conversation for specific date range
+const dateMessages = await getConversationHistoryByDateRange('baiqi', startDate, endDate);
+```
 
----
+**Write Pattern**:
+```typescript
+// Save new message
+await saveMessage({
+  id: generateId(),
+  characterId: 'baiqi',
+  timestamp: new Date(),
+  sender: 'character',
+  content: 'Hello! How are you today?',
+  messageType: 'text',
+  context: {
+    mood: 'happy',
+    closeness: 30,
+    timeOfDay: 'morning',
+    relationshipStage: 'acquaintance'
+  }
+});
+```
+
+### Character Configuration
+
+**Read Pattern**:
+```typescript
+// Load character config from JSON file
+const config = await loadCharacterConfig('baiqi');
+
+// Access dialogue templates
+const greeting = config.dialogueTemplates.greetings['morning'][0];
+
+// Check closeness stage threshold
+const minCloseness = config.stateThresholds.closenessStages['friend']; // e.g., 40
+```
+
+## Migration & Versioning
+
+**Version Strategy**: 
+- Entity interfaces include version field for future schema migrations
+- IndexedDB stores support version upgrades via `db.ts` migration logic
+- CharacterConfig JSON files are versioned in file system
+
+**Migration Scenarios**:
+1. Adding new CharacterMood values → Update type definition, migrate existing records
+2. Changing closeness calculation → Update algorithm, recalculate existing states
+3. Adding new conversation message types → Update MessageType union, handle legacy messages
 
 ## Privacy & Data Ownership
 
-- All data stored locally in IndexedDB (no cloud sync)
-- Users can export conversation history as JSON/CSV
-- Users can delete conversation history (with confirmation)
-- Users can reset character state (with option to preserve closeness level)
-- No conversation content or character state shared with external services
+**Local Storage**: All data stored in IndexedDB (browser local storage) - never transmitted to external servers without explicit user consent (NFR-008, NFR-010).
+
+**Data Export**: Users can export all CharacterState and ConversationMessage data as JSON (NFR-009, Principle 8).
+
+**Data Deletion**: 
+- Users can delete conversation history (NFR-009)
+- Character state can be reset (closeness returns to 0, mood resets to default)
+- Deletion is permanent and verifiable (Principle 8)
+
+**Data Retention**: 
+- Conversation history: Up to 1 year (3,650 messages estimated per NFR-004)
+- Character state: Persisted indefinitely until user deletion
+- Character config: Loaded from JSON files, not stored in IndexedDB (or cached only)

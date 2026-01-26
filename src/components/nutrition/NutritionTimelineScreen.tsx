@@ -1,212 +1,958 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, subDays, isSameDay, isAfter, startOfDay } from 'date-fns';
+import { FoodReflection, MealType } from '../../types';
 import { useFoodReflection } from '../../hooks/useFoodReflection';
 import { useTranslation } from '../../hooks/useTranslation';
-import { FoodReflection, MealType } from '../../types';
-import Card from '../shared/Card';
-import Button from '../shared/Button';
-import AIIndicator from '../shared/AIIndicator';
-
-const mealIcons: Record<MealType, string> = {
-  breakfast: '🌅',
-  lunch: '🍽️',
-  dinner: '🌙',
-  snack: '🌃',
-};
-
-const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+import { motion } from 'framer-motion';
+import { CalendarDays, ChevronLeft, ChevronRight, Utensils, Trash2, X } from 'lucide-react';
+import CharacterAvatar from '../companion/CharacterAvatar';
+import { useCompanion } from '../../hooks/useCompanion';
+import ImageBackground from '../shared/ImageBackground';
+import FloatingParticles from '../companion/FloatingParticles';
 
 export default function NutritionTimelineScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { t } = useTranslation();
-  const { getReflectionsForDate } = useFoodReflection();
-  
-  const selectedDate = searchParams.get('date') || new Date().toISOString().split('T')[0];
+  const { t, locale } = useTranslation();
+  const { getReflectionsForRange, getReflectionsForDate, deleteReflection } = useFoodReflection();
+  const { characterState } = useCompanion('baiqi');
+
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'calendar' | 'timeline'>('calendar');
   const [reflections, setReflections] = useState<FoodReflection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ 
+    id: string; 
+    title: string;
+  } | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const NUTRITION_BACKGROUND_URL = '/images/008fP45sly1hreaeb88b2j323s35s1l1.jpg';
+  // Enhanced glassmorphism: brighter, more saturated (matching Health Timeline)
+  const GLASS_BG = 'rgba(255, 255, 255, 0.32)';
+  const GLASS_BLUR = 'blur(30px)';
+  const TEXT = '#4A4A4A';
+  const PINK = '#FF7E9D'; // food reflection
+  // Unified button style constants
+  const BUTTON_RADIUS = 20;
+  const BUTTON_GRADIENT = 'linear-gradient(135deg, rgba(255,126,157,0.35) 0%, rgba(167,139,250,0.30) 100%)';
+  const monthKey = format(currentMonth, 'yyyy-MM');
 
   useEffect(() => {
-    const loadReflections = async () => {
-      try {
-        setLoading(true);
-        const dateReflections = await getReflectionsForDate(selectedDate);
-        // Sort by meal order, ensuring mealType has a default value
-        const sorted = dateReflections.sort((a, b) => {
-          const aMealType = a.mealType || 'lunch';
-          const bMealType = b.mealType || 'lunch';
-          const aIndex = mealOrder.indexOf(aMealType);
-          const bIndex = mealOrder.indexOf(bMealType);
-          // If mealType not found in order, put it at the end
-          const aPos = aIndex === -1 ? 999 : aIndex;
-          const bPos = bIndex === -1 ? 999 : bIndex;
-          return aPos - bPos;
-        });
-        setReflections(sorted);
-      } catch (err) {
-        console.error('Failed to load reflections:', err);
-        setReflections([]);
-      } finally {
-        setLoading(false);
+    const dateParam = searchParams.get('date');
+    
+    if (dateParam) {
+      // From calendar click: show day detail view
+      setSelectedDate(dateParam);
+      setViewMode('timeline');
+      loadReflectionsForDate(dateParam);
+    } else {
+      // From nutrition folder: always show calendar view
+      setSelectedDate(null);
+      setViewMode('calendar');
+      loadReflectionsForMonth();
+    }
+  }, [searchParams, currentMonth]);
+
+  const loadReflectionsForMonth = async () => {
+    try {
+      setLoading(true);
+      const monthStart = startOfMonth(currentMonth);
+      const monthEnd = endOfMonth(currentMonth);
+      const monthReflections = await getReflectionsForRange(
+        format(monthStart, 'yyyy-MM-dd'),
+        format(monthEnd, 'yyyy-MM-dd')
+      );
+      setReflections(monthReflections);
+    } catch (err) {
+      console.error('Failed to load reflections:', err);
+      setReflections([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadReflectionsForDate = async (dateStr: string) => {
+    try {
+      setLoading(true);
+      const dateReflections = await getReflectionsForDate(dateStr);
+      setReflections(dateReflections);
+    } catch (err) {
+      console.error('Failed to load reflections:', err);
+      setReflections([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Listen for food reflection saved event to refresh calendar
+  useEffect(() => {
+    const handleFoodReflectionSaved = () => {
+      if (selectedDate) {
+        loadReflectionsForDate(selectedDate);
+      } else {
+        loadReflectionsForMonth();
       }
     };
-    loadReflections();
-  }, [selectedDate, getReflectionsForDate]);
 
-  const handleEdit = (reflection: FoodReflection) => {
+    window.addEventListener('foodReflectionSaved', handleFoodReflectionSaved);
+    return () => {
+      window.removeEventListener('foodReflectionSaved', handleFoodReflectionSaved);
+    };
+  }, [selectedDate]);
+
+  // Calendar data - get reflections for current month
+  const monthItems = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    
+    return reflections.filter((reflection) => {
+      const reflectionDate = parseISO(reflection.date + 'T00:00:00');
+      return reflectionDate >= monthStart && reflectionDate <= monthEnd;
+    });
+  }, [currentMonth, reflections]);
+
+  const getItemsForDate = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return monthItems.filter((reflection) => {
+      return reflection.date === dateStr;
+    });
+  };
+
+  const calendarDays = eachDayOfInterval({
+    start: startOfMonth(currentMonth),
+    end: endOfMonth(currentMonth),
+  });
+
+  const firstDayOfWeek = getDay(startOfMonth(currentMonth));
+  const emptyDays = Array(firstDayOfWeek).fill(null);
+
+  const handleDateClick = (date: Date) => {
+    // Don't allow clicking on future dates
+    const today = startOfDay(new Date());
+    const selectedDay = startOfDay(date);
+    if (isAfter(selectedDay, today)) {
+      return; // Disable future dates
+    }
+    const dateStr = format(date, 'yyyy-MM-dd');
+    navigate(`/nutrition/timeline?date=${dateStr}`);
+  };
+
+  const handlePreviousMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
+  const weekDays = locale === 'zh' 
+    ? ['日', '一', '二', '三', '四', '五', '六']
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    
+    try {
+      // Find the reflection to get its date and mealType
+      const reflectionToDelete = reflections.find(r => r.id === deleteConfirm.id);
+      if (reflectionToDelete) {
+        // Use deleteFoodReflection with date and mealType
+        const { deleteFoodReflection } = await import('../../services/storage/indexedDB');
+        await deleteFoodReflection(reflectionToDelete.date, reflectionToDelete.mealType);
+      }
+      setDeleteConfirm(null);
+      // Refresh reflections
+      if (selectedDate) {
+        await loadReflectionsForDate(selectedDate);
+      } else {
+        await loadReflectionsForMonth();
+      }
+    } catch (err) {
+      console.error('Failed to delete:', err);
+      alert(t('common.deleteFailed') || 'Failed to delete');
+    }
+  };
+
+  const handleView = (reflection: FoodReflection) => {
     const mealType = reflection.mealType || 'lunch';
     navigate(`/nutrition/reflection?date=${reflection.date}&mealType=${mealType}`);
   };
 
+  // Timeline items for display
+  const timelineItems = useMemo((): FoodReflection[] => {
+    if (loading) {
+      return [];
+    }
+    
+    if (selectedDate) {
+      // Day detail view: show reflections for selected date
+      return reflections.sort((a, b) => {
+        const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+        const aIndex = mealOrder.indexOf(a.mealType || 'lunch');
+        const bIndex = mealOrder.indexOf(b.mealType || 'lunch');
+        return aIndex - bIndex;
+      });
+    } else {
+      // Calendar view: show reflections for current month
+      return monthItems.sort((a, b) => {
+        const dateA = parseISO(a.date + 'T00:00:00');
+        const dateB = parseISO(b.date + 'T00:00:00');
+        return dateB.getTime() - dateA.getTime();
+      });
+    }
+  }, [reflections, selectedDate, loading, monthItems]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <p className="text-gray-600 font-body">{t('common.loading')}</p>
+      <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+        <ImageBackground imageUrl={NUTRITION_BACKGROUND_URL} />
+        <div className="relative z-10 w-full" style={{ 
+          paddingTop: 'calc(env(safe-area-inset-top) + 112px)',
+          paddingLeft: '20px',
+          paddingRight: '20px',
+        }}>
+          <div
+            className="text-center py-12"
+            style={{
+              background: GLASS_BG,
+              backdropFilter: GLASS_BLUR,
+              WebkitBackdropFilter: GLASS_BLUR,
+              border: '1px solid rgba(255, 255, 255, 0.55)',
+              borderRadius: 20,
+              color: TEXT,
+            }}
+          >
+            <p className="text-sm font-semibold">{t('common.loading')}</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pb-20">
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-heading text-gray-900 mb-3">
-            {t('nutrition.timeline.title')}
-          </h1>
-          <p className="text-gray-600 font-body text-base">
-            {format(parseISO(selectedDate + 'T00:00:00'), 'yyyy年MM月dd日')}
-          </p>
-        </div>
+    <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+      {/* ImageBackground - nutrition-specific Bai Qi illustration */}
+      <ImageBackground imageUrl={NUTRITION_BACKGROUND_URL} />
+      
+      {/* Floating Particles */}
+      <div className="absolute inset-0" style={{ zIndex: 2 }}>
+        <FloatingParticles count={20} />
+      </div>
 
-        {reflections.length === 0 ? (
-          <Card className="mb-6 bg-white shadow-lg border-0">
-            <p className="text-gray-500 font-body text-center py-12">
-              {t('nutrition.timeline.noRecords')}
-            </p>
-          </Card>
-        ) : (
-          <div className="space-y-4 mb-6">
-            {reflections.map((reflection) => {
-              // Ensure mealType has a valid value (default to 'lunch' if missing)
-              const mealType: MealType = (reflection.mealType || 'lunch') as MealType;
-              return (
-                <Card key={reflection.id} className="bg-white shadow-lg border-0">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <span className="text-4xl">{mealIcons[mealType] || mealIcons.lunch}</span>
-                    <div>
-                      <h3 className="text-xl font-heading text-gray-900">
-                        {t(`nutrition.record.mealType.${mealType}`)}
-                      </h3>
-                      <p className="text-sm text-gray-600 font-body">
-                        {t(`nutrition.record.${reflection.reflection}`)}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleEdit(reflection)}
-                    className="p-2 rounded-xl hover:bg-gray-100 transition-colors touch-target"
-                    aria-label={t('common.edit')}
-                  >
-                    <span className="text-xl">✏️</span>
-                  </button>
-                </div>
+      {/* Back button - top-left corner */}
+      <motion.button
+        onClick={() => {
+          // If in Day Detail View (selectedDate exists), go back to timeline calendar view
+          // Otherwise, go back to nutrition home
+          if (selectedDate) {
+            navigate('/nutrition/timeline');
+          } else {
+            navigate('/nutrition');
+          }
+        }}
+        className="fixed top-5 left-5 z-50 rounded-full flex items-center justify-center transition-all duration-200 touch-target"
+        style={{
+          width: '56px',
+          height: '56px',
+          background: 'rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.4)',
+          boxShadow: '0 4px 24px rgba(255, 255, 255, 0.2)',
+          color: TEXT,
+        }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        aria-label={t('common.back')}
+      >
+        <ChevronLeft size={28} strokeWidth={2} />
+      </motion.button>
 
-                {reflection.notes && (
-                  <p className="text-gray-700 font-body mb-4 text-sm leading-relaxed">
-                    {reflection.notes}
-                  </p>
-                )}
+      <div
+        className="relative z-10 w-full"
+        style={{ 
+          paddingTop: 'calc(env(safe-area-inset-top) + 80px)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom) + 100px)',
+          paddingLeft: '20px',
+          paddingRight: '20px',
+          margin: 0,
+        }}
+      >
 
-                {/* AI Analysis */}
-                {reflection.aiAnalysis && reflection.processingStatus === 'completed' && (
-                  <div className="mt-5 pt-5 border-t border-gray-200">
-                    <div className="flex items-start gap-3 mb-4">
-                      <AIIndicator status="completed" />
-                      <h4 className="text-base font-semibold text-gray-900 font-body">
-                        {t('nutrition.record.aiAnalysis')}
-                      </h4>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-800 font-body mb-2">
-                          {t('nutrition.record.encouragement')}
-                        </p>
-                        <p className="text-sm text-gray-700 font-body leading-relaxed">
-                          {reflection.aiAnalysis.encouragement}
-                        </p>
-                      </div>
-                      
-                      {reflection.aiAnalysis.suggestions.length > 0 && (
-                        <div>
-                          <p className="text-sm font-semibold text-gray-800 font-body mb-2">
-                            {t('nutrition.record.suggestions')}
-                          </p>
-                          <ul className="list-disc list-inside space-y-2">
-                            {reflection.aiAnalysis.suggestions.map((suggestion, idx) => (
-                              <li key={idx} className="text-sm text-gray-700 font-body leading-relaxed">
-                                {suggestion}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      
-                      <div>
-                        <p className="text-sm font-semibold text-gray-800 font-body mb-2">
-                          {t('nutrition.record.suitability')}
-                        </p>
-                        <p className="text-sm text-gray-700 font-body leading-relaxed">
-                          {reflection.aiAnalysis.suitability}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {reflection.processingStatus === 'processing' && (
-                  <div className="mt-5 pt-5 border-t border-gray-200">
-                    <AIIndicator status="processing" />
-                  </div>
-                )}
-
-                {reflection.processingStatus === 'failed' && reflection.errorMessage && (
-                  <div className="mt-5 pt-5 border-t border-gray-200">
-                    <p className="text-sm text-red-600 font-body">
-                      {t('nutrition.record.aiFailed')}: {reflection.errorMessage}
-                    </p>
-                  </div>
-                )}
-                </Card>
-              );
-            })}
+        {/* Calendar view header controls */}
+        {viewMode === 'calendar' && (
+          <div className="mb-4 flex items-center justify-between">
+            <div className="text-sm font-semibold" style={{ color: TEXT }}>
+              {format(currentMonth, locale === 'zh' ? 'yyyy年MM月' : 'MMMM yyyy')}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePreviousMonth}
+                className="touch-target rounded-full flex items-center justify-center"
+                style={{
+                  width: 44,
+                  height: 44,
+                  background: GLASS_BG,
+                  border: '1px solid rgba(255, 255, 255, 0.55)',
+                  backdropFilter: GLASS_BLUR,
+                  WebkitBackdropFilter: GLASS_BLUR,
+                  color: TEXT,
+                }}
+                aria-label={t('common.previous')}
+              >
+                <ChevronLeft size={22} strokeWidth={2} />
+              </button>
+              <button
+                onClick={handleNextMonth}
+                className="touch-target rounded-full flex items-center justify-center"
+                style={{
+                  width: 44,
+                  height: 44,
+                  background: GLASS_BG,
+                  border: '1px solid rgba(255, 255, 255, 0.55)',
+                  backdropFilter: GLASS_BLUR,
+                  WebkitBackdropFilter: GLASS_BLUR,
+                  color: TEXT,
+                }}
+                aria-label={t('common.next')}
+              >
+                <ChevronRight size={22} strokeWidth={2} />
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Action buttons */}
-        <div className="flex gap-4">
-          <Button
-            variant="outline"
-            fullWidth
-            onClick={() => navigate('/nutrition')}
-            className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+        {/* Day Detail View: Selected date display */}
+        {viewMode === 'timeline' && selectedDate && (
+          <div className="mb-4">
+            <button
+              onClick={() => setShowDatePicker(true)}
+              className="touch-target text-sm font-semibold"
+              style={{ color: TEXT }}
+            >
+              {format(parseISO(selectedDate + 'T00:00:00'), locale === 'zh' ? 'yyyy年MM月dd日' : 'MMMM d, yyyy')}
+            </button>
+          </div>
+        )}
+
+        {/* Main content area - Calendar always shown, Timeline below when in calendar view */}
+        {viewMode === 'calendar' && (
+          <motion.div
+            key={`calendar-${monthKey}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
           >
-            {t('common.back')}
-          </Button>
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={() => navigate(`/nutrition/reflection?date=${selectedDate}`)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {t('nutrition.timeline.addRecord')}
-          </Button>
-        </div>
+              {/* Glassmorphism Calendar container */}
+              <motion.div
+                className="mb-5"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                style={{
+                  background: GLASS_BG,
+                  backdropFilter: GLASS_BLUR,
+                  WebkitBackdropFilter: GLASS_BLUR,
+                  border: '1px solid rgba(255, 255, 255, 0.6)',
+                  borderRadius: 24,
+                  boxShadow: '0 18px 50px rgba(0,0,0,0.10)',
+                  padding: 18,
+                }}
+              >
+                <div className="grid grid-cols-7 gap-2">
+                  {weekDays.map((day) => (
+                    <div
+                      key={day}
+                      className="text-center text-xs font-semibold py-1"
+                      style={{ color: 'rgba(74,74,74,0.75)' }}
+                    >
+                      {day}
+                    </div>
+                  ))}
+
+                  {emptyDays.map((_, index) => (
+                    <div key={`empty-${index}`} className="aspect-square" />
+                  ))}
+
+                  {calendarDays.map((day) => {
+                    const dayReflections = getItemsForDate(day);
+                    const hasReflections = dayReflections.length > 0;
+                    const today = isSameDay(day, new Date());
+                    const isFuture = isAfter(startOfDay(day), startOfDay(new Date()));
+                    
+                    // Determine glow color based on food reflections
+                    let glowColor: string | null = null;
+                    let glowShadow: string | null = null;
+                    let topGlowColor: string | null = null;
+                    
+                    if (hasReflections) {
+                      // Food reflections: pink
+                      glowColor = 'linear-gradient(135deg, rgba(255,126,157,0.28) 0%, rgba(255,126,157,0.20) 100%)';
+                      glowShadow = '0 0 0 1px rgba(255,255,255,0.18) inset, 0 10px 24px rgba(255,126,157,0.25)';
+                      topGlowColor = 'rgba(255, 126, 157, 0.25)';
+                    } else if (today) {
+                      // Today but no records: white/grey
+                      glowColor = 'rgba(255, 255, 255, 0.25)';
+                      glowShadow = '0 0 0 1px rgba(255,255,255,0.3) inset, 0 8px 20px rgba(255,255,255,0.2)';
+                      topGlowColor = 'rgba(255, 255, 255, 0.3)';
+                    }
+
+                    return (
+                      <button
+                        key={day.toISOString()}
+                        onClick={() => handleDateClick(day)}
+                        disabled={isFuture}
+                        className="aspect-square rounded-2xl transition-transform active:scale-[0.98]"
+                        style={{
+                          border: 'none',
+                          background: (today || hasReflections) ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.06)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          opacity: isFuture ? 0.4 : 1,
+                          cursor: isFuture ? 'not-allowed' : 'pointer',
+                        }}
+                        aria-label={`${t('nutrition.calendar.title')} ${format(day, 'yyyy-MM-dd')}`}
+                      >
+                        {glowColor && glowShadow && (
+                          <div
+                            className="absolute inset-0"
+                            style={{
+                              background: glowColor,
+                              boxShadow: glowShadow,
+                            }}
+                          />
+                        )}
+
+                        {topGlowColor && (
+                          <div
+                            className="absolute left-1/2 top-2 -translate-x-1/2"
+                            style={{
+                              width: 26,
+                              height: 26,
+                              borderRadius: 9999,
+                              background: topGlowColor,
+                            }}
+                          />
+                        )}
+
+                        <div className="relative z-10 h-full w-full flex flex-col items-center justify-center">
+                          <div className="text-xs font-semibold" style={{ color: TEXT }}>
+                            {format(day, 'd')}
+                          </div>
+                          {hasReflections && (
+                            <div className="mt-1 flex items-center gap-1">
+                              <span
+                                title={`${dayReflections.length} ${t('nutrition.timeline.foodRecord')}`}
+                                style={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: 9999,
+                                  background: PINK,
+                                  boxShadow: '0 0 12px rgba(255,126,157,0.55)',
+                                  display: 'inline-block',
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+
+              {/* Legend redesign: dots */}
+              <div
+                className="mb-6"
+                style={{
+                  background: GLASS_BG,
+                  backdropFilter: GLASS_BLUR,
+                  WebkitBackdropFilter: GLASS_BLUR,
+                  border: '1px solid rgba(255, 255, 255, 0.55)',
+                  borderRadius: 18,
+                  padding: '12px 14px',
+                }}
+              >
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm" style={{ color: TEXT }}>
+                  <div className="flex items-center gap-2">
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 9999,
+                        background: 'rgba(255, 255, 255, 0.8)',
+                        boxShadow: '0 0 14px rgba(255,255,255,0.45)',
+                        display: 'inline-block',
+                      }}
+                    />
+                    <span style={{ opacity: 0.9 }}>{t('health.calendar.today')}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 9999,
+                        background: PINK,
+                        boxShadow: '0 0 14px rgba(255,126,157,0.45)',
+                        display: 'inline-block',
+                      }}
+                    />
+                    <span style={{ opacity: 0.9 }}>{t('nutrition.timeline.foodRecord')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline list below calendar - show records for current month */}
+              {timelineItems.length > 0 && (
+                <div className="mt-6">
+                  <div className="mb-3 text-sm font-semibold" style={{ color: TEXT }}>
+                    {t('nutrition.calendar.viewTimeline')}
+                  </div>
+                  <div className="space-y-3">
+                    {timelineItems.map((reflection, index) => {
+                      const date = parseISO(reflection.date + 'T00:00:00');
+                      const isNewDay =
+                        index === 0 ||
+                        (timelineItems[index - 1] &&
+                          timelineItems[index - 1].date !== reflection.date);
+
+                      const mealType = reflection.mealType || 'lunch';
+                      const mealTypeLabel = t(`nutrition.record.mealType.${mealType}`);
+                      const reflectionTypeLabel = t(`nutrition.record.${reflection.reflection}`);
+
+                      return (
+                        <div key={reflection.id}>
+                          {isNewDay && (
+                            <div className="px-2 mb-2">
+                              <div className="text-xs font-semibold" style={{ color: 'rgba(74,74,74,0.8)' }}>
+                                {format(date, locale === 'zh' ? 'yyyy年MM月dd日' : 'EEEE, MMMM d, yyyy')}
+                              </div>
+                            </div>
+                          )}
+
+                          <div
+                            className="rounded-3xl"
+                            style={{
+                              background: GLASS_BG,
+                              backdropFilter: GLASS_BLUR,
+                              WebkitBackdropFilter: GLASS_BLUR,
+                              border: '1px solid rgba(255, 255, 255, 0.55)',
+                              boxShadow: '0 18px 50px rgba(0,0,0,0.10)',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <div className="flex items-start gap-3 p-4">
+                              <div
+                                style={{
+                                  width: 4,
+                                  alignSelf: 'stretch',
+                                  borderRadius: 9999,
+                                  background: PINK,
+                                  boxShadow: `0 0 14px ${PINK}55`,
+                                  marginTop: 2,
+                                }}
+                              />
+
+                              <div
+                                className="flex-1 cursor-pointer"
+                                onClick={() => handleView(reflection)}
+                              >
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Utensils size={16} strokeWidth={2} style={{ color: TEXT, opacity: 0.85 }} />
+                                  <span className="text-xs font-semibold" style={{ color: 'rgba(74,74,74,0.75)' }}>
+                                    {mealTypeLabel}
+                                  </span>
+                                  <span className="text-xs" style={{ color: 'rgba(74,74,74,0.55)' }}>
+                                    {reflectionTypeLabel}
+                                  </span>
+                                </div>
+
+                                <div className="text-sm font-semibold" style={{ color: TEXT }}>
+                                  {reflection.notes || mealTypeLabel}
+                                </div>
+
+                                {reflection.aiAnalysis && (
+                                  <div className="text-xs mt-1" style={{ color: 'rgba(74,74,74,0.75)' }}>
+                                    {t('nutrition.record.aiAnalysis')}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Delete button */}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteConfirm({
+                                      id: reflection.id,
+                                      title: `${mealTypeLabel} - ${reflectionTypeLabel}`,
+                                    });
+                                  }}
+                                  className="touch-target rounded-full flex items-center justify-center"
+                                  style={{
+                                    width: 44,
+                                    height: 44,
+                                    background: GLASS_BG,
+                                    border: '1px solid rgba(255, 255, 255, 0.55)',
+                                    backdropFilter: GLASS_BLUR,
+                                    WebkitBackdropFilter: GLASS_BLUR,
+                                    color: TEXT,
+                                  }}
+                                  aria-label={t('common.delete')}
+                                  title={t('common.delete')}
+                                >
+                                  <Trash2 size={18} strokeWidth={2} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+          </motion.div>
+        )}
+
+        {/* Day Detail View - when clicking a date from calendar */}
+        {viewMode === 'timeline' && selectedDate && (
+            <motion.div
+              key={`timeline-${selectedDate}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            >
+              {timelineItems.length === 0 ? (
+                <div
+                  style={{
+                    background: GLASS_BG,
+                    backdropFilter: GLASS_BLUR,
+                    WebkitBackdropFilter: GLASS_BLUR,
+                    border: '1px solid rgba(255, 255, 255, 0.6)',
+                    borderRadius: 24,
+                    boxShadow: '0 18px 50px rgba(0,0,0,0.10)',
+                    padding: 24,
+                    color: TEXT,
+                  }}
+                >
+                  {/* Bai Qi dialogue bubble for empty state - with avatar */}
+                  <div className="mb-6 flex items-start gap-3">
+                    {/* Character Avatar */}
+                    <div className="flex-shrink-0">
+                      <CharacterAvatar
+                        characterId="baiqi"
+                        characterState={characterState}
+                        size="md"
+                        showBadge={false}
+                      />
+                    </div>
+                    {/* Dialogue Bubble */}
+                    <div
+                      className="relative flex-1 px-5 py-4 rounded-2xl"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.4)',
+                        backdropFilter: 'blur(30px)',
+                        borderRadius: '24px',
+                        border: '1px solid rgba(255, 255, 255, 0.55)',
+                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(255, 209, 220, 0.18)',
+                        color: TEXT,
+                      }}
+                    >
+                      <p className="text-sm leading-relaxed" style={{ color: TEXT }}>
+                        {locale === 'zh' 
+                          ? '今天还没来得及记录饮食吗？我很想知道你今天吃了什么。'
+                          : "Haven't recorded your meals today? I'd love to know what you ate."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {timelineItems.map((reflection) => {
+                    const mealType = reflection.mealType || 'lunch';
+                    const mealTypeLabel = t(`nutrition.record.mealType.${mealType}`);
+                    const reflectionTypeLabel = t(`nutrition.record.${reflection.reflection}`);
+
+                    return (
+                      <div key={reflection.id}>
+                        <div
+                          className="rounded-3xl"
+                          style={{
+                            background: GLASS_BG,
+                            backdropFilter: GLASS_BLUR,
+                            WebkitBackdropFilter: GLASS_BLUR,
+                            border: '1px solid rgba(255, 255, 255, 0.55)',
+                            boxShadow: '0 18px 50px rgba(0,0,0,0.10)',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <div className="flex items-start gap-3 p-4">
+                            <div
+                              style={{
+                                width: 4,
+                                alignSelf: 'stretch',
+                                borderRadius: 9999,
+                                background: PINK,
+                                boxShadow: `0 0 14px ${PINK}55`,
+                                marginTop: 2,
+                              }}
+                            />
+
+                            <div
+                              className="flex-1 cursor-pointer"
+                              onClick={() => handleView(reflection)}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <Utensils size={16} strokeWidth={2} style={{ color: TEXT, opacity: 0.85 }} />
+                                <span className="text-xs font-semibold" style={{ color: 'rgba(74,74,74,0.75)' }}>
+                                  {mealTypeLabel}
+                                </span>
+                                <span className="text-xs" style={{ color: 'rgba(74,74,74,0.55)' }}>
+                                  {reflectionTypeLabel}
+                                </span>
+                              </div>
+
+                              <div className="text-sm font-semibold" style={{ color: TEXT }}>
+                                {reflection.notes || mealTypeLabel}
+                              </div>
+
+                              {reflection.aiAnalysis && (
+                                <div className="text-xs mt-2" style={{ color: 'rgba(74,74,74,0.75)' }}>
+                                  {reflection.aiAnalysis.encouragement}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Delete button */}
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirm({
+                                    id: reflection.id,
+                                    title: `${mealTypeLabel} - ${reflectionTypeLabel}`,
+                                  });
+                                }}
+                                className="touch-target rounded-full flex items-center justify-center"
+                                style={{
+                                  width: 44,
+                                  height: 44,
+                                  background: GLASS_BG,
+                                  border: '1px solid rgba(255, 255, 255, 0.55)',
+                                  backdropFilter: GLASS_BLUR,
+                                  WebkitBackdropFilter: GLASS_BLUR,
+                                  color: TEXT,
+                                }}
+                                aria-label={t('common.delete')}
+                                title={t('common.delete')}
+                              >
+                                <Trash2 size={18} strokeWidth={2} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+          </motion.div>
+        )}
       </div>
+
+      {/* Fixed bottom action button */}
+      {!(!loading && timelineItems.length === 0 && !selectedDate && reflections.length === 0) && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 w-full"
+          style={{ 
+            paddingBottom: `calc(1rem + env(safe-area-inset-bottom))`,
+            paddingLeft: '20px',
+            paddingRight: '20px',
+          }}
+        >
+          <div className="w-full">
+            <button
+              className="touch-target w-full font-semibold"
+              style={{
+                minHeight: 52,
+                borderRadius: BUTTON_RADIUS,
+                background: BUTTON_GRADIENT,
+                backdropFilter: 'blur(22px)',
+                WebkitBackdropFilter: 'blur(22px)',
+                border: '1px solid rgba(255, 255, 255, 0.55)',
+                boxShadow: '0 16px 40px rgba(255,126,157,0.18)',
+                color: TEXT,
+              }}
+              onClick={() => {
+                // If viewing a specific date, pass it as a parameter
+                if (selectedDate) {
+                  const hour = new Date().getHours();
+                  let defaultMealType = 'lunch';
+                  if (hour >= 6 && hour < 10) defaultMealType = 'breakfast';
+                  else if (hour >= 10 && hour < 14) defaultMealType = 'lunch';
+                  else if (hour >= 14 && hour < 20) defaultMealType = 'dinner';
+                  else defaultMealType = 'snack';
+                  navigate(`/nutrition/reflection?date=${selectedDate}&mealType=${defaultMealType}`);
+                } else {
+                  navigate('/nutrition/reflection');
+                }
+              }}
+            >
+              {t('nutrition.timeline.addRecord')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Date Picker Modal - horizontal date selector */}
+      {showDatePicker && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowDatePicker(false)} />
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="relative w-full rounded-t-3xl p-5"
+            style={{
+              background: GLASS_BG,
+              backdropFilter: GLASS_BLUR,
+              WebkitBackdropFilter: GLASS_BLUR,
+              border: '1px solid rgba(255, 255, 255, 0.55)',
+              borderBottom: 'none',
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.15)',
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold" style={{ color: TEXT }}>
+                {t('nutrition.calendar.selectDate') || 'Select Date'}
+              </h3>
+              <button
+                onClick={() => setShowDatePicker(false)}
+                className="touch-target rounded-full flex items-center justify-center"
+                style={{
+                  width: 32,
+                  height: 32,
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  color: TEXT,
+                }}
+              >
+                <X size={18} strokeWidth={2} />
+              </button>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {Array.from({ length: 30 }, (_, i) => {
+                const date = subDays(new Date(), i);
+                const dateStr = format(date, 'yyyy-MM-dd');
+                const isSelected = selectedDate === dateStr;
+                // Check if this date has any reflections
+                const dateHasReflections = reflections.some(r => r.date === dateStr);
+                
+                return (
+                  <button
+                    key={dateStr}
+                    onClick={() => {
+                      setSelectedDate(dateStr);
+                      navigate(`/nutrition/timeline?date=${dateStr}`);
+                      setShowDatePicker(false);
+                    }}
+                    className="touch-target flex-shrink-0 rounded-2xl px-4 py-3 flex flex-col items-center gap-1"
+                    style={{
+                      minWidth: 80,
+                      background: isSelected ? BUTTON_GRADIENT : GLASS_BG,
+                      border: `1px solid ${isSelected ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.4)'}`,
+                      backdropFilter: GLASS_BLUR,
+                      WebkitBackdropFilter: GLASS_BLUR,
+                      color: TEXT,
+                    }}
+                  >
+                    <div className="text-xs font-semibold">
+                      {format(date, locale === 'zh' ? 'MM月dd日' : 'MMM d')}
+                    </div>
+                    <div className="text-xs" style={{ opacity: 0.7 }}>
+                      {format(date, locale === 'zh' ? 'EEE' : 'EEE')}
+                    </div>
+                    {dateHasReflections && (
+                      <div
+                        className="mt-1"
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: 9999,
+                          background: PINK,
+                          boxShadow: '0 0 8px rgba(255,126,157,0.6)',
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal (glass) */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDeleteConfirm(null)} />
+          <div
+            className="relative w-full rounded-3xl p-5"
+            style={{
+              background: GLASS_BG,
+              backdropFilter: GLASS_BLUR,
+              WebkitBackdropFilter: GLASS_BLUR,
+              border: '1px solid rgba(255, 255, 255, 0.55)',
+              boxShadow: '0 22px 70px rgba(0,0,0,0.22)',
+              color: TEXT,
+            }}
+          >
+            <div className="text-lg font-semibold mb-2">{t('common.confirmDelete')}</div>
+            <div className="text-sm mb-5" style={{ color: 'rgba(74,74,74,0.75)' }}>
+              {t('common.deleteConfirmMessage').replace('{item}', deleteConfirm.title)}
+            </div>
+            <div className="flex gap-3">
+              <button
+                className="touch-target w-full font-semibold"
+                style={{
+                  minHeight: 52,
+                  borderRadius: BUTTON_RADIUS,
+                  background: GLASS_BG,
+                  backdropFilter: 'blur(22px)',
+                  WebkitBackdropFilter: 'blur(22px)',
+                  border: '1px solid rgba(255, 255, 255, 0.55)',
+                  color: TEXT,
+                }}
+                onClick={() => setDeleteConfirm(null)}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                className="touch-target w-full font-semibold"
+                style={{
+                  minHeight: 52,
+                  borderRadius: BUTTON_RADIUS,
+                  background: BUTTON_GRADIENT,
+                  backdropFilter: 'blur(22px)',
+                  WebkitBackdropFilter: 'blur(22px)',
+                  border: '1px solid rgba(255, 255, 255, 0.55)',
+                  color: TEXT,
+                }}
+                onClick={handleDelete}
+              >
+                {t('common.delete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

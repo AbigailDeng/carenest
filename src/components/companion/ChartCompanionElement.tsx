@@ -57,7 +57,7 @@ export default function ChartCompanionElement({
       {/* Character avatar */}
       <div className="relative">
         <img
-          src={config.avatarUrl}
+          src="/images/images.jpg"
           alt={config.name.en || config.name.zh || 'Character'}
           className="w-16 h-16 rounded-full object-cover border-2 border-white/90 shadow-lg"
           style={{

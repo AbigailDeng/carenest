@@ -54,7 +54,7 @@ export const en = {
       uploading: 'Uploading...',
       supports: 'Supports text files, images, and PDFs (max 10MB)',
       ocrProcessing: 'Recognizing text from image...',
-      processing: 'Processing with AI...',
+      processing: 'Processing...',
       processingNote: 'This may take a few moments',
       offline: "You're offline. The file will be processed when you're back online.",
       viewSummary: 'View Summary',
@@ -67,7 +67,7 @@ export const en = {
       relatedConditions: 'Related Health Conditions',
       viewLifestyle: 'View Lifestyle Suggestions',
       pending: "This record is queued for AI processing. It will be processed when you're online.",
-      processing: 'Processing with AI...',
+      processing: 'Processing...',
       failed: 'Processing failed',
     },
     symptoms: {
@@ -81,7 +81,7 @@ export const en = {
       characters: 'characters',
       saveEntry: 'Save Entry',
       saving: 'Saving...',
-      analyzing: 'Analyzing symptoms with AI...',
+      analyzing: 'He is analyzing your symptoms...',
       analyzingNote: 'This may take a few moments',
       offline: "You're offline. AI analysis requires an internet connection.",
       aiAnalysisFailed: 'AI analysis failed. Please try again.',
@@ -248,11 +248,14 @@ export const en = {
     comingSoon: 'Coming Soon',
   },
   nutrition: {
+    ledgerPrompt: "I've organized these nutrition records for you. Which part would you like to check first?",
+    viewTimeline: 'View Timeline',
     record: {
       title: 'Daily Food Record',
       description:
         'Record how you ate today. AI will provide encouragement and suggestions based on your health.',
       mealTypeLabel: 'Meal Type',
+      reflectionTypeLabel: 'How did you eat today?',
       mealType: {
         breakfast: 'Breakfast',
         lunch: 'Lunch',
@@ -287,13 +290,17 @@ export const en = {
       title: 'Nutrition Calendar',
       legend: 'Legend',
       viewTimeline: 'View Timeline',
+      selectDate: 'Select Date',
+      today: 'Today',
     },
     timeline: {
       title: 'Food Record Timeline',
       noRecords: 'No records for this day',
       addRecord: 'Add Record',
+      foodRecord: 'Food Record',
     },
     reflection: {
+      prompt: "As your nutritionist, I want to understand every detail of your meals today. Tell me what you ate, and I'll help you analyze the nutritional balance to ensure your diet is healthy and well-balanced.",
       title: 'Daily Food Reflection',
       description: 'How did you eat today? Choose what feels right - no judgment, no counting.',
       light: 'Light',
@@ -382,6 +389,7 @@ export const en = {
   },
   companion: {
     title: 'Companion',
+    characterName: 'Bai Qi',
     send: 'Send',
     typeMessage: 'Type a message...',
     generating: 'Generating response...',

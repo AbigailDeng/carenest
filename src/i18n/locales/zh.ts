@@ -53,7 +53,7 @@ export const zh = {
       uploading: '上传中...',
       supports: '支持文本文件、图片和 PDF（最大 10MB）',
       ocrProcessing: '正在识别图片中的文字...',
-      processing: 'AI 处理中...',
+      processing: '处理中...',
       processingNote: '这可能需要几分钟',
       offline: '您处于离线状态。文件将在您重新上线时处理。',
       viewSummary: '查看摘要',
@@ -66,7 +66,7 @@ export const zh = {
       relatedConditions: '相关健康状况',
       viewLifestyle: '查看生活方式建议',
       pending: '此记录已排队等待 AI 处理。将在您上线时处理。',
-      processing: 'AI 处理中...',
+      processing: '处理中...',
       failed: '处理失败',
     },
     symptoms: {
@@ -80,7 +80,7 @@ export const zh = {
       characters: '字符',
       saveEntry: '保存记录',
       saving: '保存中...',
-      analyzing: 'AI 正在分析症状...',
+      analyzing: '他正在为你分析症状...',
       analyzingNote: '这可能需要几分钟',
       offline: '您处于离线状态。AI 分析需要互联网连接。',
       aiAnalysisFailed: 'AI 分析失败。请重试。',
@@ -221,7 +221,7 @@ export const zh = {
   },
   ai: {
     ready: 'AI 就绪',
-    processing: 'AI 处理中...',
+      processing: '处理中...',
     completed: 'AI 已生成',
     error: 'AI 错误',
   },
@@ -245,10 +245,13 @@ export const zh = {
     comingSoon: '即将推出',
   },
   nutrition: {
+    ledgerPrompt: '这是我为你整理的营养记录，想先看哪一部分？',
+    viewTimeline: '查看时间线',
     record: {
       title: '每日食物记录',
       description: '记录你今天吃得怎么样。AI会根据你的健康状况提供鼓励和建议。',
       mealTypeLabel: '餐次',
+      reflectionTypeLabel: '今天吃得怎么样？',
       mealType: {
         breakfast: '早餐',
         lunch: '午餐',
@@ -282,13 +285,17 @@ export const zh = {
       title: '营养日历',
       legend: '图例',
       viewTimeline: '查看时间线',
+      selectDate: '选择日期',
+      today: '今天',
     },
     timeline: {
       title: '食物记录时间线',
       noRecords: '这一天还没有记录',
       addRecord: '添加记录',
+      foodRecord: '食物记录',
     },
     reflection: {
+      prompt: '作为你的营养师，我想了解你今天每一餐的细节。告诉我你吃了什么，我会帮你分析营养搭配，确保你的饮食健康又均衡。',
       title: '每日食物反思',
       description: '今天你吃得怎么样？选择你觉得合适的 - 没有评判，没有计算。',
       light: '清淡',
@@ -375,6 +382,7 @@ export const zh = {
   },
   companion: {
     title: '陪伴',
+    characterName: '白起',
     send: '发送',
     typeMessage: '输入消息...',
     generating: '正在生成回复...',

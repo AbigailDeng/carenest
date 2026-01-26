@@ -331,7 +331,7 @@ export default function HomeScreen() {
   };
 
   // Background image URL - use specified character illustration (白起立绘)
-  const backgroundImageUrl = '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
+  const backgroundImageUrl = '/images/DM_20260123234921_001.jpg';
 
   return (
     <div
