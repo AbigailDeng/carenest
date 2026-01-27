@@ -19,7 +19,6 @@ import HealthCalendarScreen from '../health/HealthCalendarScreen';
 import FoodReflectionScreen from '../nutrition/FoodReflectionScreen';
 import NutritionReflectionDetailScreen from '../nutrition/NutritionReflectionDetailScreen';
 import NutritionInputScreen from '../nutrition/NutritionInputScreen';
-import MealSuggestionsScreen from '../nutrition/MealSuggestionsScreen';
 import NutritionCalendarScreen from '../nutrition/NutritionCalendarScreen';
 import NutritionTimelineScreen from '../nutrition/NutritionTimelineScreen';
 import SugarReductionEasterEgg from '../nutrition/SugarReductionEasterEgg';
@@ -29,6 +28,7 @@ import DataExportScreen from '../privacy/DataExportScreen';
 import DataDeletionScreen from '../privacy/DataDeletionScreen';
 import CompanionScreen from '../companion/CompanionScreen';
 import HomeScreen from '../companion/HomeScreen';
+import EmotionalScreen from '../companion/EmotionalScreen';
 
 function Layout() {
   const isOffline = useOffline();
@@ -73,11 +73,10 @@ function Layout() {
             <Route path="/nutrition/calendar" element={<NutritionCalendarScreen />} />
             <Route path="/nutrition/timeline" element={<NutritionTimelineScreen />} />
             <Route path="/nutrition/input" element={<NutritionInputScreen />} />
-            <Route path="/nutrition/suggestions" element={<MealSuggestionsScreen />} />
             <Route path="/nutrition/easter-egg" element={<SugarReductionEasterEgg />} />
 
             {/* Emotional routes */}
-            <Route path="/emotional" element={<EmotionalHomeScreen />} />
+            <Route path="/emotional" element={<EmotionalScreen />} />
 
             {/* Companion routes */}
             <Route path="/companion" element={<CompanionScreen />} />
@@ -545,21 +544,6 @@ function NutritionHomeScreen() {
             {t('nutrition.ledgerPrompt') || '这是我为你整理的营养记录，想先看哪一部分？'}
           </p>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function EmotionalHomeScreen() {
-  const { t } = useTranslation();
-
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-heading text-clay-text mb-6">{t('home.emotionalSupport')}</h1>
-      <p className="text-clay-textDim font-body text-lg mb-6">{t('home.subtitle')}</p>
-      <div className="p-8 text-center text-clay-textDim clay-card bg-clay-lavender">
-        <p className="text-5xl mb-3">💕</p>
-        <p className="font-body text-lg">{t('app.comingSoon')}</p>
       </div>
     </div>
   );

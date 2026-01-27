@@ -86,6 +86,7 @@ interface ConversationContext {
   closeness: number;
   timeOfDay: string;             // "morning" | "afternoon" | "evening" | "night"
   relationshipStage: RelationshipStage;
+  emotionalState?: "happy" | "concerned" | "comforting" | "energetic" | "calm"; // Character's emotional state at message time (FR-045)
 }
 ```
 
@@ -106,6 +107,12 @@ interface ConversationContext {
 - Messages stored indefinitely (up to 1 year per NFR-004: 3,650 messages estimated)
 - Users can delete conversation history (NFR-009)
 - Deletion cascades: deleting character state optionally deletes associated messages
+
+**Memory Continuity Support** (FR-045):
+- Conversation history MUST be queryable by characterId for memory continuity
+- Recent messages (last 10-20) MUST be included in dialogue generation context
+- System MUST reference past topics and demonstrate memory of user's shared information
+- Indexes support efficient queries for conversation context retrieval
 
 ### CharacterConfig
 

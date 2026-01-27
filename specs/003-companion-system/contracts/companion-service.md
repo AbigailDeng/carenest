@@ -48,6 +48,9 @@ interface CompanionDialogueOutput {
 2. If AI service available → generate context-aware dialogue via LLM
 3. Response time target: <2 seconds (NFR-001)
 4. Dialogue tone reflects character state (mood, closeness, energy, time-of-day)
+5. **Memory Continuity** (FR-045): MUST reference previous conversation content, demonstrate memory of user's shared information
+6. **Emotional Variation** (FR-045): Response MUST reflect character's emotional state (happy, concerned, comforting, etc.) based on conversation content
+7. **Response Delay** (FR-045): System MUST simulate typing delay (1-3 seconds) before displaying response to create authentic conversation feel
 
 **Error Handling**:
 - AI service timeout → fallback to templates
@@ -107,9 +110,11 @@ The service constructs prompts for the LLM that include:
    - Time of day: [timeOfDay]
 
 3. **Conversation Context**:
-   - Recent messages (last 5-10)
+   - Recent messages (last 10-20 for memory continuity, FR-045)
    - User's emotional state (if expressed)
    - Integration hint (if applicable)
+   - References to past topics (memory continuity requirement)
+   - Character's current emotional state (for emotional variation, FR-045)
 
 4. **Dialogue Guidelines**:
    - Maintain supportive, empathetic tone
@@ -117,6 +122,9 @@ The service constructs prompts for the LLM that include:
    - Avoid medical advice or diagnoses
    - Frame activities as "doing together" when suggesting modules
    - Keep responses concise (1-3 sentences)
+   - **Blended Personality** (FR-044): Simultaneously embody boyfriend and psychologist traits - caring boyfriend who also provides professional psychological support, naturally combining warmth, intimacy, and professional guidance
+   - **Memory Continuity** (FR-045): Reference past topics, demonstrate memory (e.g., "你之前提到过..." / "You mentioned before...")
+   - **Emotional Variation** (FR-045): Display different emotional states based on conversation content (more empathetic when user expresses sadness, more cheerful when user shares positive news)
 
 **Example Prompt**:
 ```

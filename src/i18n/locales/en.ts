@@ -372,6 +372,7 @@ export const en = {
         "It's late - here are some gentle suggestions for you. Remember, eating when you need to is part of self-care.",
     },
     input: {
+      prompt: "Tell me what ingredients you have, and I'll help you think of something yummy to make~",
       title: 'Ingredient Input',
       description: 'What ingredients do you have? (Optional - suggestions can use some or all)',
       ingredientsLabel: 'Ingredients',
@@ -390,6 +391,7 @@ export const en = {
         high: 'High',
       },
       generateSuggestions: 'Get Suggestions',
+      newSearch: 'New Search',
       noIngredients: 'Please enter at least one ingredient',
       ingredientTooShort: 'Ingredient must be at least 2 characters',
       duplicateIngredient: 'This ingredient is already added',

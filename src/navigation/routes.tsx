@@ -14,7 +14,6 @@ export const routes = {
   nutrition: {
     base: '/nutrition',
     input: '/nutrition/input',
-    suggestions: '/nutrition/suggestions',
     detail: '/nutrition/detail',
     reflection: '/nutrition/reflection',
     easterEgg: '/nutrition/easter-egg',

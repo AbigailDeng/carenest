@@ -178,6 +178,7 @@ export interface MessageContext {
   energy: "low" | "medium" | "high";
   timeOfDay: "morning" | "afternoon" | "evening" | "night";
   relationshipStage: RelationshipStage;
+  emotionalState?: "sad" | "stressed" | "lonely" | "happy" | "neutral"; // FR-045: Track character's emotional state during message
 }
 
 export interface ConversationMessage extends BaseEntity {

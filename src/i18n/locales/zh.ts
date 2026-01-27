@@ -366,6 +366,7 @@ export const zh = {
       message: '已经很晚了 - 这里有一些温和的建议。记住，在需要的时候进食是自我关怀的一部分。',
     },
     input: {
+      prompt: '告诉我你有什么食材，我来帮你想想做什么好吃的～',
       title: '食材输入',
       description: '你有什么食材？（可选 - 建议可以使用部分或全部）',
       ingredientsLabel: '食材',
@@ -382,6 +383,7 @@ export const zh = {
         high: '高',
       },
       generateSuggestions: '获取建议',
+      newSearch: '重新搜索',
       noIngredients: '请输入至少一个食材',
       ingredientTooShort: '食材必须至少2个字符',
       duplicateIngredient: '此食材已添加',

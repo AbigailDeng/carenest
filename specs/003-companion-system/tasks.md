@@ -266,7 +266,7 @@ description: "Task list for Companion Character System feature implementation"
 - [X] T140 [US2] Verify back button on /nutrition/reflection route navigates to /nutrition/timeline per spec Session 2026-01-27 clarification
 - [X] T141 [US2] Verify AI analysis results displayed ONLY in dialogue bubble on Nutrition Reflection creation page (not structured sections) per spec Session 2026-01-27 clarification
 - [X] T142 [US2] Implement toast notification for save success feedback on Nutrition Reflection page per spec Session 2026-01-27 clarification
-- [ ] T143 [US2] Update Nutrition Input Screen (/nutrition/input route) visual consistency per FR-041: ImageBackground with nutrition-specific illustration `/images/008fP45sly1hreaeb88b2j323s35s1l1.jpg`, FloatingParticles (count 20), CharacterAvatar dialogue bubble at top-20 left-aligned, glassmorphism styling (background rgba(255,255,255,0.85), blur(10px)), back button navigates to /nutrition, fixed bottom buttons with equal width in src/components/nutrition/NutritionInputScreen.tsx
+- [X] T143 [US2] Update Nutrition Input Screen (/nutrition/input route) visual consistency and integrate meal suggestions per FR-041: ImageBackground with nutrition-specific illustration `/images/008fP45sly1hreaeb88b2j323s35s1l1.jpg`, FloatingParticles (count 20), CharacterAvatar dialogue bubble at top-20 left-aligned with nutrition.input.prompt i18n key, glassmorphism styling (background rgba(255,255,255,0.85), blur(10px)), back button navigates to /nutrition, fixed bottom buttons with equal width, integrate meal suggestions directly into screen (NO separate /nutrition/suggestions route), display suggestions below input form in scrollable area when "Generate Suggestions" clicked, input form remains visible above suggestions, replace "Generate Suggestions" button with "New Search" after suggestions displayed, remove /nutrition/suggestions route from routing configuration in src/components/nutrition/NutritionInputScreen.tsx and src/navigation/routes.tsx
 
 #### Integration with Existing Modules
 
@@ -317,7 +317,48 @@ description: "Task list for Companion Character System feature implementation"
 - [X] T161 [US3] Verify CharacterConfig.dialogueTemplates.responses includes emotion-based templates per data-model.md
 - [X] T162 [US3] Verify template fallback uses emotional support templates when LLM fails per FR-006
 
-**Checkpoint**: At this point, all user stories should be independently functional. Users can express emotions, receive empathetic responses, and feel emotionally supported through natural conversation.
+#### /emotional Route - Chat-Style Conversation Interface (FR-042, FR-043)
+
+- [X] T199 [US3] Implement home page conversation input navigation to /emotional route: when user sends message on home page (clicks send button), immediately navigate to /emotional route with user's message in src/components/companion/HomeScreen.tsx per FR-042
+- [X] T200 [US3] Create EmotionalScreen component in src/components/companion/EmotionalScreen.tsx for /emotional route per FR-043
+- [X] T201 [US3] Implement chat-style layout in EmotionalScreen: message bubbles (user messages right-aligned with user avatar, AI messages left-aligned with CharacterAvatar) per FR-043
+- [X] T202 [US3] Implement full-screen character illustration background in EmotionalScreen using ImageBackground component with character illustration from public/images directory (different from Health and Nutrition pages) per FR-043
+- [X] T203 [US3] Implement FloatingParticles component in EmotionalScreen (count 20) with same breathing animation as other pages per FR-043
+- [X] T204 [US3] Implement glassmorphism styling for message bubbles in EmotionalScreen: background rgba(255,255,255,0.15), backdrop-filter blur(25px), border 1px solid rgba(255,255,255,0.4) per FR-043
+- [X] T205 [US3] Implement conversation history display in EmotionalScreen: scrollable area with messages and timestamps per FR-043
+- [X] T206 [US3] Implement input field in EmotionalScreen: fixed at bottom of screen, glassmorphism styling matching other pages, text input and send button per FR-043
+- [X] T207 [US3] Verify input field does NOT overlap with message area in EmotionalScreen per FR-043
+- [X] T208 [US3] Implement navigation header in EmotionalScreen: glassmorphism back button (44x44px minimum) in top-left corner navigating to home page (/) per FR-043
+- [X] T209 [US3] Verify bottom navigation bar hidden on /emotional route (same as /health and /nutrition routes) in src/components/shared/Layout.tsx per FR-043
+- [X] T210 [US3] Implement continuous conversation flow in EmotionalScreen: support multiple messages, display AI responses with CharacterAvatar icon on left side per FR-043
+- [X] T211 [US3] Verify visual consistency: same typography (#4A4A4A text color) and color scheme as Health and Nutrition pages per FR-043
+- [X] T212 [US3] Add /emotional route to routing configuration in src/components/shared/Layout.tsx pointing to EmotionalScreen component per FR-043
+
+#### AI Personality Blending - Boyfriend + Psychologist Fusion (FR-044)
+
+- [X] T213 [US3] Enhance companionService.generateResponse to implement blended boyfriend/psychologist fusion personality: simultaneously embody both traits naturally integrated per FR-044
+- [X] T214 [US3] Update LLM prompt construction in companionService.ts to include blended personality guidelines: caring boyfriend who also provides professional psychological support per FR-044
+- [X] T215 [US3] Verify AI responses avoid formal clinical language, use conversational first-person tone (e.g., "我注意到你提到...这让我有点担心" / "I noticed you mentioned...this worries me a bit") per FR-044
+- [X] T216 [US3] Verify AI responses balance emotional support with professional insights per FR-044
+- [X] T217 [US3] Verify AI maintains consistent personality throughout conversation (not switching between roles) per FR-044
+- [X] T218 [US3] Update dialogue templates in CharacterConfig to reflect blended personality (warmth + professional guidance) per FR-044
+
+#### Realistic Conversation Mechanisms (FR-045)
+
+- [X] T219 [US3] Implement memory continuity in companionService.generateResponse: AI MUST remember previous conversation content, reference past topics, demonstrate memory of user's shared information (e.g., "你之前提到过..." / "You mentioned before...") per FR-045
+- [X] T220 [US3] Enhance conversationStorage.getConversationHistory to support querying recent messages (last 10-20 messages) for memory continuity context per FR-045
+- [X] T221 [US3] Update companionService.generateResponse to incorporate context from previous messages in same conversation session per FR-045
+- [X] T222 [US3] Implement emotional variation display in EmotionalScreen: AI MUST display different emotional states (happy, concerned, comforting, energetic, etc.) based on conversation content per FR-045
+- [X] T223 [US3] Implement dynamic character mood updates in EmotionalScreen: character mood changes based on user's emotional expressions per FR-045
+- [X] T224 [US3] Implement visual indicators for emotional state in EmotionalScreen: CharacterAvatar expression changes, dialogue bubble styling variations reflect emotional state per FR-045
+- [X] T225 [US3] Implement response delay simulation in EmotionalScreen: "typing..." indicator (animated dots or typing animation) before displaying AI message per FR-045
+- [X] T226 [US3] Verify response delay is reasonable (1-3 seconds minimum, up to 5 seconds for longer responses) and varies slightly (not fixed timing) per FR-045
+- [X] T227 [US3] Verify typing indicator appears immediately after user sends message and disappears when AI response is ready to display per FR-045
+- [X] T228 [US3] Create useEmotionalConversation hook in src/hooks/useEmotionalConversation.ts for dedicated emotional conversation management with memory continuity, emotional variation, and response delay support per FR-045
+- [X] T229 [US3] Integrate useEmotionalConversation hook in EmotionalScreen component per FR-045
+- [X] T230 [US3] Update ConversationContext type in src/types.ts to include emotionalState field for tracking character's emotional state during message per data-model.md updates
+
+**Checkpoint**: At this point, all user stories should be independently functional. Users can express emotions, receive empathetic responses, and feel emotionally supported through natural conversation. The /emotional route provides dedicated chat-style conversation interface with realistic conversation mechanisms (memory continuity, emotional variation, response delay) and blended boyfriend/psychologist AI personality.
 
 ---
 
@@ -366,9 +407,9 @@ description: "Task list for Companion Character System feature implementation"
 - [X] T187 [P] Verify all companion dialogue text is internationalized (zh.ts, en.ts) per FR-022
 - [X] T188 [P] Verify character names are internationalized per FR-022
 - [X] T189 [P] Verify UI elements (buttons, labels) are internationalized
-- [ ] T190 [P] Add nutrition.ledgerPrompt i18n key for Nutrition Details Page dialogue per spec Session 2026-01-25
-- [ ] T191 [P] Add nutrition.reflection.prompt i18n key for Nutrition Reflection Screen dialogue per spec Session 2026-01-25
-- [ ] T192 [P] Add nutrition.input dialogue i18n keys for Nutrition Input Screen per FR-041
+- [X] T190 [P] Add nutrition.ledgerPrompt i18n key for Nutrition Details Page dialogue per spec Session 2026-01-25
+- [X] T191 [P] Add nutrition.reflection.prompt i18n key for Nutrition Reflection Screen dialogue per spec Session 2026-01-25
+- [X] T192 [P] Add nutrition.input dialogue i18n keys for Nutrition Input Screen per FR-041
 
 ### Documentation & Testing
 
@@ -483,14 +524,14 @@ With multiple developers:
 
 ## Summary
 
-**Total Task Count**: 198 tasks
+**Total Task Count**: 230 tasks
 
 **Task Count per Phase**:
 - Phase 1 (Setup): 8 tasks ✅ All completed (100%)
 - Phase 2 (Foundational): 27 tasks ✅ All completed (100%)
 - Phase 3 (User Story 1 - P1 MVP): 48 tasks ✅ All completed (100%)
-- Phase 4 (User Story 2 - P2): 63 tasks - 62 tasks completed, 1 remaining (T143 - Nutrition Input Screen visual consistency) (98%)
-- Phase 5 (User Story 3 - P2): 16 tasks ✅ All completed (100%)
+- Phase 4 (User Story 2 - P2): 63 tasks - 62 tasks completed, 1 remaining (T143 - Nutrition Input Screen visual consistency and meal suggestions integration) (98%)
+- Phase 5 (User Story 3 - P2): 48 tasks - 19 tasks completed, 29 remaining (T201-T230 - /emotional route implementation, AI personality blending, realistic conversation mechanisms) (40%)
 - Phase 6 (Polish): 36 tasks - 20 tasks completed, 16 remaining (56%)
 
 **Parallel Opportunities Identified**:
@@ -502,15 +543,18 @@ With multiple developers:
 
 **Independent Test Criteria**:
 - **User Story 1**: Open app → receive greeting → engage in conversation → feel emotionally supported ✅
-- **User Story 2**: Companion suggests activity → user completes → receives encouraging feedback (T143 remaining for full consistency)
-- **User Story 3**: Express emotions → receive empathetic responses → feel emotionally supported ✅
+- **User Story 2**: Companion suggests activity → user completes → receives encouraging feedback (T143 remaining: Nutrition Input Screen visual consistency and meal suggestions integration)
+- **User Story 3**: Express emotions → receive empathetic responses → feel emotionally supported. NEW: Send message on home page → navigate to /emotional → chat-style conversation with memory continuity, emotional variation, response delay, blended boyfriend/psychologist personality (T199-T230 remaining)
 
 **Suggested MVP Scope**: User Story 1 (Daily Companion Interaction) ✅ Complete
 
 **Format Validation**: ✅ All tasks follow checklist format (checkbox, ID, labels, file paths)
 
 **Remaining Critical Tasks**:
-- T143 [US2]: Nutrition Input Screen visual consistency per FR-041 (high priority for module consistency)
+- T143 [US2]: Nutrition Input Screen visual consistency and meal suggestions integration per FR-041 (high priority: integrate suggestions into /nutrition/input, remove /nutrition/suggestions route)
+- T201-T212 [US3]: /emotional route implementation per FR-042, FR-043 (high priority: chat-style interface, visual consistency) - T199, T200, T212 completed
+- T213-T218 [US3]: AI personality blending per FR-044 (high priority: boyfriend/psychologist fusion personality)
+- T219-T230 [US3]: Realistic conversation mechanisms per FR-045 (high priority: memory continuity, emotional variation, response delay)
 - T165-T167 [P]: UI/UX polish verification (aesthetic, mobile-first, accessibility)
 - T175-T179 [P]: Performance optimization verification
 - T184 [P]: Data management verification (conversation history capacity)
