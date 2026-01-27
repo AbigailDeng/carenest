@@ -4,6 +4,8 @@ Auto-generated from all feature plans. Last updated: 2026-01-26
 
 ## Active Technologies
 - IndexedDB (local browser storage) for conversation history and character state (003-companion-ui-polish)
+- TypeScript 5.2.2, React 18.2.0, React Router 6.20.0 (003-companion-ui-polish)
+- IndexedDB (browser local storage) via `idb` library, accessed through `src/db.ts` and `src/services/storage/` service layer (003-companion-ui-polish)
 
 - TypeScript 5.x, React 18.x (003-companion-ui-polish)
 
@@ -24,9 +26,10 @@ npm test && npm run lint
 TypeScript 5.x, React 18.x: Follow standard conventions
 
 ## Recent Changes
+- 003-companion-ui-polish: Added TypeScript 5.2.2, React 18.2.0, React Router 6.20.0
+- 003-companion-ui-polish: Added TypeScript 5.x, React 18.x
 - 003-companion-ui-polish: Added TypeScript 5.x, React 18.x
 
-- 003-companion-ui-polish: Added TypeScript 5.x, React 18.x
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

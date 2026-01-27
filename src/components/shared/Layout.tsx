@@ -17,6 +17,7 @@ import SymptomAnalysisScreen from '../health/SymptomAnalysisScreen';
 import HealthTimelineScreen from '../health/HealthTimelineScreen';
 import HealthCalendarScreen from '../health/HealthCalendarScreen';
 import FoodReflectionScreen from '../nutrition/FoodReflectionScreen';
+import NutritionReflectionDetailScreen from '../nutrition/NutritionReflectionDetailScreen';
 import NutritionInputScreen from '../nutrition/NutritionInputScreen';
 import MealSuggestionsScreen from '../nutrition/MealSuggestionsScreen';
 import NutritionCalendarScreen from '../nutrition/NutritionCalendarScreen';
@@ -49,7 +50,6 @@ function Layout() {
           </div>
         )}
 
-
         {/* Main content area */}
         <main className="flex-1 w-full overflow-hidden" style={{ backgroundColor: 'transparent' }}>
           <Routes>
@@ -69,6 +69,7 @@ function Layout() {
             {/* Nutrition routes */}
             <Route path="/nutrition" element={<NutritionHomeScreen />} />
             <Route path="/nutrition/reflection" element={<FoodReflectionScreen />} />
+            <Route path="/nutrition/reflection/:id" element={<NutritionReflectionDetailScreen />} />
             <Route path="/nutrition/calendar" element={<NutritionCalendarScreen />} />
             <Route path="/nutrition/timeline" element={<NutritionTimelineScreen />} />
             <Route path="/nutrition/input" element={<NutritionInputScreen />} />
@@ -88,7 +89,6 @@ function Layout() {
             <Route path="/privacy/delete" element={<DataDeletionScreen />} />
           </Routes>
         </main>
-
 
         {/* Settings drawer */}
         <SettingsDrawer isOpen={settingsOpen} onClose={handleCloseDrawer} />
@@ -147,10 +147,21 @@ function HealthHomeScreen() {
   };
 
   // Background image URL - use specified character illustration
-  const HOME_SCREEN_BACKGROUND_URL = '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
+  const HOME_SCREEN_BACKGROUND_URL =
+    '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
 
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+    <div
+      className="relative min-h-screen overflow-hidden"
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        minHeight: '100vh',
+        margin: 0,
+        padding: 0,
+      }}
+    >
       {/* ImageBackground - 最底层唯一的白起立绘 */}
       <ImageBackground imageUrl={HOME_SCREEN_BACKGROUND_URL} />
 
@@ -182,7 +193,7 @@ function HealthHomeScreen() {
       {/* Staggered floating folders (NOT a list): absolute stacking, overlap, no overflow */}
       <div className="fixed inset-0 z-30" style={{ pointerEvents: 'none' }}>
         <div className="relative w-full h-full">
-          {cards.map((card) => {
+          {cards.map(card => {
             const IconComponent = card.icon;
             return (
               <motion.div
@@ -259,8 +270,15 @@ function HealthHomeScreen() {
 
                 {/* Folder content */}
                 <div className="h-[calc(100%-26px)] px-4 py-3 flex items-center justify-center gap-3">
-                  <IconComponent size={34} strokeWidth={1.75} style={{ color: '#FF7E9D', fill: 'none' }} />
-                  <span className="text-base font-semibold text-center leading-snug" style={{ color: '#4A4A4A' }}>
+                  <IconComponent
+                    size={34}
+                    strokeWidth={1.75}
+                    style={{ color: '#FF7E9D', fill: 'none' }}
+                  />
+                  <span
+                    className="text-base font-semibold text-center leading-snug"
+                    style={{ color: '#4A4A4A' }}
+                  >
                     {card.label}
                   </span>
                 </div>
@@ -362,7 +380,17 @@ function NutritionHomeScreen() {
   const NUTRITION_BACKGROUND_URL = '/images/008fP45sly1hreaeb88b2j323s35s1l1.jpg';
 
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+    <div
+      className="relative min-h-screen overflow-hidden"
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        minHeight: '100vh',
+        margin: 0,
+        padding: 0,
+      }}
+    >
       {/* ImageBackground - 最底层唯一的白起立绘 (nutrition-specific) */}
       <ImageBackground imageUrl={NUTRITION_BACKGROUND_URL} />
 
@@ -394,7 +422,7 @@ function NutritionHomeScreen() {
       {/* Staggered floating folders (NOT a list): absolute stacking, overlap, no overflow */}
       <div className="fixed inset-0 z-30" style={{ pointerEvents: 'none' }}>
         <div className="relative w-full h-full">
-          {cards.map((card) => {
+          {cards.map(card => {
             const IconComponent = card.icon;
             return (
               <motion.div
@@ -471,8 +499,15 @@ function NutritionHomeScreen() {
 
                 {/* Folder content */}
                 <div className="h-[calc(100%-26px)] px-4 py-3 flex items-center justify-center gap-3">
-                  <IconComponent size={34} strokeWidth={1.75} style={{ color: '#FF7E9D', fill: 'none' }} />
-                  <span className="text-base font-semibold text-center leading-snug" style={{ color: '#4A4A4A' }}>
+                  <IconComponent
+                    size={34}
+                    strokeWidth={1.75}
+                    style={{ color: '#FF7E9D', fill: 'none' }}
+                  />
+                  <span
+                    className="text-base font-semibold text-center leading-snug"
+                    style={{ color: '#4A4A4A' }}
+                  >
                     {card.label}
                   </span>
                 </div>

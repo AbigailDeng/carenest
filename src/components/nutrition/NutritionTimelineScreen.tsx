@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, subDays, isSameDay, isAfter, startOfDay } from 'date-fns';
+import {
+  format,
+  parseISO,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  getDay,
+  addMonths,
+  subMonths,
+  subDays,
+  isSameDay,
+  isAfter,
+  startOfDay,
+} from 'date-fns';
 import { FoodReflection, MealType } from '../../types';
 import { useFoodReflection } from '../../hooks/useFoodReflection';
 import { useTranslation } from '../../hooks/useTranslation';
 import { motion } from 'framer-motion';
-import { CalendarDays, ChevronLeft, ChevronRight, Utensils, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Utensils, Trash2, X } from 'lucide-react';
 import CharacterAvatar from '../companion/CharacterAvatar';
 import { useCompanion } from '../../hooks/useCompanion';
 import ImageBackground from '../shared/ImageBackground';
@@ -15,16 +28,22 @@ export default function NutritionTimelineScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { t, locale } = useTranslation();
-  const { getReflectionsForRange, getReflectionsForDate, deleteReflection } = useFoodReflection();
+  const { getReflectionsForRange, getReflectionsForDate } = useFoodReflection();
   const { characterState } = useCompanion('baiqi');
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'calendar' | 'timeline'>('calendar');
-  const [reflections, setReflections] = useState<FoodReflection[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ 
-    id: string; 
+  const [monthReflections, setMonthReflections] = useState<FoodReflection[]>([]);
+  const [dayReflections, setDayReflections] = useState<FoodReflection[]>([]);
+  const [recentReflections, setRecentReflections] = useState<FoodReflection[]>([]);
+  const [loadingMonth, setLoadingMonth] = useState(true);
+  const [loadingDay, setLoadingDay] = useState(false);
+  const [loadingRecent, setLoadingRecent] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: string;
+    date: string;
+    mealType: MealType;
     title: string;
   } | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -37,12 +56,13 @@ export default function NutritionTimelineScreen() {
   const PINK = '#FF7E9D'; // food reflection
   // Unified button style constants
   const BUTTON_RADIUS = 20;
-  const BUTTON_GRADIENT = 'linear-gradient(135deg, rgba(255,126,157,0.35) 0%, rgba(167,139,250,0.30) 100%)';
+  const BUTTON_GRADIENT =
+    'linear-gradient(135deg, rgba(255,126,157,0.35) 0%, rgba(167,139,250,0.30) 100%)';
   const monthKey = format(currentMonth, 'yyyy-MM');
 
   useEffect(() => {
     const dateParam = searchParams.get('date');
-    
+
     if (dateParam) {
       // From calendar click: show day detail view
       setSelectedDate(dateParam);
@@ -52,48 +72,74 @@ export default function NutritionTimelineScreen() {
       // From nutrition folder: always show calendar view
       setSelectedDate(null);
       setViewMode('calendar');
-      loadReflectionsForMonth();
+      setDayReflections([]);
     }
   }, [searchParams, currentMonth]);
 
   const loadReflectionsForMonth = async () => {
     try {
-      setLoading(true);
+      setLoadingMonth(true);
       const monthStart = startOfMonth(currentMonth);
       const monthEnd = endOfMonth(currentMonth);
       const monthReflections = await getReflectionsForRange(
         format(monthStart, 'yyyy-MM-dd'),
         format(monthEnd, 'yyyy-MM-dd')
       );
-      setReflections(monthReflections);
+      setMonthReflections(monthReflections);
     } catch (err) {
       console.error('Failed to load reflections:', err);
-      setReflections([]);
+      setMonthReflections([]);
     } finally {
-      setLoading(false);
+      setLoadingMonth(false);
     }
   };
 
   const loadReflectionsForDate = async (dateStr: string) => {
     try {
-      setLoading(true);
+      setLoadingDay(true);
       const dateReflections = await getReflectionsForDate(dateStr);
-      setReflections(dateReflections);
+      setDayReflections(dateReflections);
     } catch (err) {
       console.error('Failed to load reflections:', err);
-      setReflections([]);
+      setDayReflections([]);
     } finally {
-      setLoading(false);
+      setLoadingDay(false);
     }
   };
 
+  const loadRecentReflections = async () => {
+    try {
+      setLoadingRecent(true);
+      const end = new Date();
+      const start = subDays(new Date(), 29);
+      const items = await getReflectionsForRange(
+        format(start, 'yyyy-MM-dd'),
+        format(end, 'yyyy-MM-dd')
+      );
+      setRecentReflections(items);
+    } catch (err) {
+      console.error('Failed to load recent reflections:', err);
+      setRecentReflections([]);
+    } finally {
+      setLoadingRecent(false);
+    }
+  };
+
+  // Always keep month reflections fresh for calendar markers/list
+  useEffect(() => {
+    loadReflectionsForMonth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonth]);
+
   // Listen for food reflection saved event to refresh calendar
   useEffect(() => {
-    const handleFoodReflectionSaved = () => {
-      if (selectedDate) {
+    const handleFoodReflectionSaved = (e: Event) => {
+      const custom = e as CustomEvent<{ date?: string; mealType?: MealType }>;
+      const changedDate = custom.detail?.date;
+      // Refresh month view and (if currently viewing the same day) refresh day view too.
+      loadReflectionsForMonth();
+      if (selectedDate && changedDate && selectedDate === changedDate) {
         loadReflectionsForDate(selectedDate);
-      } else {
-        loadReflectionsForMonth();
       }
     };
 
@@ -103,20 +149,21 @@ export default function NutritionTimelineScreen() {
     };
   }, [selectedDate]);
 
+  // Prefetch recent reflections when opening date picker (for dots)
+  useEffect(() => {
+    if (!showDatePicker) return;
+    loadRecentReflections();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDatePicker]);
+
   // Calendar data - get reflections for current month
   const monthItems = useMemo(() => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-    
-    return reflections.filter((reflection) => {
-      const reflectionDate = parseISO(reflection.date + 'T00:00:00');
-      return reflectionDate >= monthStart && reflectionDate <= monthEnd;
-    });
-  }, [currentMonth, reflections]);
+    return monthReflections;
+  }, [monthReflections]);
 
   const getItemsForDate = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    return monthItems.filter((reflection) => {
+    return monthItems.filter(reflection => {
       return reflection.date === dateStr;
     });
   };
@@ -129,6 +176,14 @@ export default function NutritionTimelineScreen() {
   const firstDayOfWeek = getDay(startOfMonth(currentMonth));
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
+  const getDefaultMealType = (): MealType => {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 10) return 'breakfast';
+    if (hour >= 10 && hour < 14) return 'lunch';
+    if (hour >= 14 && hour < 20) return 'dinner';
+    return 'snack';
+  };
+
   const handleDateClick = (date: Date) => {
     // Don't allow clicking on future dates
     const today = startOfDay(new Date());
@@ -137,7 +192,14 @@ export default function NutritionTimelineScreen() {
       return; // Disable future dates
     }
     const dateStr = format(date, 'yyyy-MM-dd');
-    navigate(`/nutrition/timeline?date=${dateStr}`);
+    const hasReflections = getItemsForDate(date).length > 0;
+    if (hasReflections) {
+      // Show day detail view
+      navigate(`/nutrition/timeline?date=${dateStr}`);
+    } else {
+      // No records yet → go directly to add record
+      navigate(`/nutrition/reflection?date=${dateStr}&mealType=${getDefaultMealType()}`);
+    }
   };
 
   const handlePreviousMonth = () => {
@@ -148,28 +210,24 @@ export default function NutritionTimelineScreen() {
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  const weekDays = locale === 'zh' 
-    ? ['日', '一', '二', '三', '四', '五', '六']
-    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekDays =
+    locale === 'zh'
+      ? ['日', '一', '二', '三', '四', '五', '六']
+      : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
-    
+
     try {
-      // Find the reflection to get its date and mealType
-      const reflectionToDelete = reflections.find(r => r.id === deleteConfirm.id);
-      if (reflectionToDelete) {
-        // Use deleteFoodReflection with date and mealType
-        const { deleteFoodReflection } = await import('../../services/storage/indexedDB');
-        await deleteFoodReflection(reflectionToDelete.date, reflectionToDelete.mealType);
-      }
+      // Use deleteFoodReflection with date and mealType
+      const { deleteFoodReflection } = await import('../../services/storage/indexedDB');
+      await deleteFoodReflection(deleteConfirm.date, deleteConfirm.mealType);
       setDeleteConfirm(null);
       // Refresh reflections
       if (selectedDate) {
         await loadReflectionsForDate(selectedDate);
-      } else {
-        await loadReflectionsForMonth();
       }
+      await loadReflectionsForMonth();
     } catch (err) {
       console.error('Failed to delete:', err);
       alert(t('common.deleteFailed') || 'Failed to delete');
@@ -177,19 +235,19 @@ export default function NutritionTimelineScreen() {
   };
 
   const handleView = (reflection: FoodReflection) => {
-    const mealType = reflection.mealType || 'lunch';
-    navigate(`/nutrition/reflection?date=${reflection.date}&mealType=${mealType}`);
+    // Navigate to detail page using reflection ID (per FR-040)
+    navigate(`/nutrition/reflection/${reflection.id}`);
   };
 
   // Timeline items for display
   const timelineItems = useMemo((): FoodReflection[] => {
-    if (loading) {
+    if (loadingMonth || loadingDay) {
       return [];
     }
-    
+
     if (selectedDate) {
       // Day detail view: show reflections for selected date
-      return reflections.sort((a, b) => {
+      return [...dayReflections].sort((a, b) => {
         const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
         const aIndex = mealOrder.indexOf(a.mealType || 'lunch');
         const bIndex = mealOrder.indexOf(b.mealType || 'lunch');
@@ -197,23 +255,38 @@ export default function NutritionTimelineScreen() {
       });
     } else {
       // Calendar view: show reflections for current month
-      return monthItems.sort((a, b) => {
+      return [...monthItems].sort((a, b) => {
         const dateA = parseISO(a.date + 'T00:00:00');
         const dateB = parseISO(b.date + 'T00:00:00');
         return dateB.getTime() - dateA.getTime();
       });
     }
-  }, [reflections, selectedDate, loading, monthItems]);
+  }, [dayReflections, monthItems, selectedDate, loadingMonth, loadingDay]);
+
+  const loading = viewMode === 'calendar' ? loadingMonth : loadingDay;
 
   if (loading) {
     return (
-      <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+      <div
+        className="relative min-h-screen overflow-hidden"
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          minHeight: '100vh',
+          margin: 0,
+          padding: 0,
+        }}
+      >
         <ImageBackground imageUrl={NUTRITION_BACKGROUND_URL} />
-        <div className="relative z-10 w-full" style={{ 
-          paddingTop: 'calc(env(safe-area-inset-top) + 112px)',
-          paddingLeft: '20px',
-          paddingRight: '20px',
-        }}>
+        <div
+          className="relative z-10 w-full"
+          style={{
+            paddingTop: 'calc(env(safe-area-inset-top) + 112px)',
+            paddingLeft: '20px',
+            paddingRight: '20px',
+          }}
+        >
           <div
             className="text-center py-12"
             style={{
@@ -233,10 +306,20 @@ export default function NutritionTimelineScreen() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+    <div
+      className="relative min-h-screen overflow-hidden"
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        minHeight: '100vh',
+        margin: 0,
+        padding: 0,
+      }}
+    >
       {/* ImageBackground - nutrition-specific Bai Qi illustration */}
       <ImageBackground imageUrl={NUTRITION_BACKGROUND_URL} />
-      
+
       {/* Floating Particles */}
       <div className="absolute inset-0" style={{ zIndex: 2 }}>
         <FloatingParticles count={20} />
@@ -273,7 +356,7 @@ export default function NutritionTimelineScreen() {
 
       <div
         className="relative z-10 w-full"
-        style={{ 
+        style={{
           paddingTop: 'calc(env(safe-area-inset-top) + 80px)',
           paddingBottom: 'calc(env(safe-area-inset-bottom) + 100px)',
           paddingLeft: '20px',
@@ -281,11 +364,10 @@ export default function NutritionTimelineScreen() {
           margin: 0,
         }}
       >
-
         {/* Calendar view header controls */}
         {viewMode === 'calendar' && (
           <div className="mb-4 flex items-center justify-between">
-            <div className="text-sm font-semibold" style={{ color: TEXT }}>
+            <div className="text-sm font-semibold" style={{ color: '#FFFFFF' }}>
               {format(currentMonth, locale === 'zh' ? 'yyyy年MM月' : 'MMMM yyyy')}
             </div>
             <div className="flex items-center gap-2">
@@ -331,9 +413,12 @@ export default function NutritionTimelineScreen() {
             <button
               onClick={() => setShowDatePicker(true)}
               className="touch-target text-sm font-semibold"
-              style={{ color: TEXT }}
+              style={{ color: '#FFFFFF' }}
             >
-              {format(parseISO(selectedDate + 'T00:00:00'), locale === 'zh' ? 'yyyy年MM月dd日' : 'MMMM d, yyyy')}
+              {format(
+                parseISO(selectedDate + 'T00:00:00'),
+                locale === 'zh' ? 'yyyy年MM月dd日' : 'MMMM d, yyyy'
+              )}
             </button>
           </div>
         )}
@@ -347,341 +432,208 @@ export default function NutritionTimelineScreen() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
           >
-              {/* Glassmorphism Calendar container */}
-              <motion.div
-                className="mb-5"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: 'easeOut' }}
-                style={{
-                  background: GLASS_BG,
-                  backdropFilter: GLASS_BLUR,
-                  WebkitBackdropFilter: GLASS_BLUR,
-                  border: '1px solid rgba(255, 255, 255, 0.6)',
-                  borderRadius: 24,
-                  boxShadow: '0 18px 50px rgba(0,0,0,0.10)',
-                  padding: 18,
-                }}
-              >
-                <div className="grid grid-cols-7 gap-2">
-                  {weekDays.map((day) => (
-                    <div
-                      key={day}
-                      className="text-center text-xs font-semibold py-1"
-                      style={{ color: 'rgba(74,74,74,0.75)' }}
-                    >
-                      {day}
-                    </div>
-                  ))}
-
-                  {emptyDays.map((_, index) => (
-                    <div key={`empty-${index}`} className="aspect-square" />
-                  ))}
-
-                  {calendarDays.map((day) => {
-                    const dayReflections = getItemsForDate(day);
-                    const hasReflections = dayReflections.length > 0;
-                    const today = isSameDay(day, new Date());
-                    const isFuture = isAfter(startOfDay(day), startOfDay(new Date()));
-                    
-                    // Determine glow color based on food reflections
-                    let glowColor: string | null = null;
-                    let glowShadow: string | null = null;
-                    let topGlowColor: string | null = null;
-                    
-                    if (hasReflections) {
-                      // Food reflections: pink
-                      glowColor = 'linear-gradient(135deg, rgba(255,126,157,0.28) 0%, rgba(255,126,157,0.20) 100%)';
-                      glowShadow = '0 0 0 1px rgba(255,255,255,0.18) inset, 0 10px 24px rgba(255,126,157,0.25)';
-                      topGlowColor = 'rgba(255, 126, 157, 0.25)';
-                    } else if (today) {
-                      // Today but no records: white/grey
-                      glowColor = 'rgba(255, 255, 255, 0.25)';
-                      glowShadow = '0 0 0 1px rgba(255,255,255,0.3) inset, 0 8px 20px rgba(255,255,255,0.2)';
-                      topGlowColor = 'rgba(255, 255, 255, 0.3)';
-                    }
-
-                    return (
-                      <button
-                        key={day.toISOString()}
-                        onClick={() => handleDateClick(day)}
-                        disabled={isFuture}
-                        className="aspect-square rounded-2xl transition-transform active:scale-[0.98]"
-                        style={{
-                          border: 'none',
-                          background: (today || hasReflections) ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.06)',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          opacity: isFuture ? 0.4 : 1,
-                          cursor: isFuture ? 'not-allowed' : 'pointer',
-                        }}
-                        aria-label={`${t('nutrition.calendar.title')} ${format(day, 'yyyy-MM-dd')}`}
-                      >
-                        {glowColor && glowShadow && (
-                          <div
-                            className="absolute inset-0"
-                            style={{
-                              background: glowColor,
-                              boxShadow: glowShadow,
-                            }}
-                          />
-                        )}
-
-                        {topGlowColor && (
-                          <div
-                            className="absolute left-1/2 top-2 -translate-x-1/2"
-                            style={{
-                              width: 26,
-                              height: 26,
-                              borderRadius: 9999,
-                              background: topGlowColor,
-                            }}
-                          />
-                        )}
-
-                        <div className="relative z-10 h-full w-full flex flex-col items-center justify-center">
-                          <div className="text-xs font-semibold" style={{ color: TEXT }}>
-                            {format(day, 'd')}
-                          </div>
-                          {hasReflections && (
-                            <div className="mt-1 flex items-center gap-1">
-                              <span
-                                title={`${dayReflections.length} ${t('nutrition.timeline.foodRecord')}`}
-                                style={{
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: 9999,
-                                  background: PINK,
-                                  boxShadow: '0 0 12px rgba(255,126,157,0.55)',
-                                  display: 'inline-block',
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-
-              {/* Legend redesign: dots */}
-              <div
-                className="mb-6"
-                style={{
-                  background: GLASS_BG,
-                  backdropFilter: GLASS_BLUR,
-                  WebkitBackdropFilter: GLASS_BLUR,
-                  border: '1px solid rgba(255, 255, 255, 0.55)',
-                  borderRadius: 18,
-                  padding: '12px 14px',
-                }}
-              >
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm" style={{ color: TEXT }}>
-                  <div className="flex items-center gap-2">
-                    <span
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: 9999,
-                        background: 'rgba(255, 255, 255, 0.8)',
-                        boxShadow: '0 0 14px rgba(255,255,255,0.45)',
-                        display: 'inline-block',
-                      }}
-                    />
-                    <span style={{ opacity: 0.9 }}>{t('health.calendar.today')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: 9999,
-                        background: PINK,
-                        boxShadow: '0 0 14px rgba(255,126,157,0.45)',
-                        display: 'inline-block',
-                      }}
-                    />
-                    <span style={{ opacity: 0.9 }}>{t('nutrition.timeline.foodRecord')}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Timeline list below calendar - show records for current month */}
-              {timelineItems.length > 0 && (
-                <div className="mt-6">
-                  <div className="mb-3 text-sm font-semibold" style={{ color: TEXT }}>
-                    {t('nutrition.calendar.viewTimeline')}
-                  </div>
-                  <div className="space-y-3">
-                    {timelineItems.map((reflection, index) => {
-                      const date = parseISO(reflection.date + 'T00:00:00');
-                      const isNewDay =
-                        index === 0 ||
-                        (timelineItems[index - 1] &&
-                          timelineItems[index - 1].date !== reflection.date);
-
-                      const mealType = reflection.mealType || 'lunch';
-                      const mealTypeLabel = t(`nutrition.record.mealType.${mealType}`);
-                      const reflectionTypeLabel = t(`nutrition.record.${reflection.reflection}`);
-
-                      return (
-                        <div key={reflection.id}>
-                          {isNewDay && (
-                            <div className="px-2 mb-2">
-                              <div className="text-xs font-semibold" style={{ color: 'rgba(74,74,74,0.8)' }}>
-                                {format(date, locale === 'zh' ? 'yyyy年MM月dd日' : 'EEEE, MMMM d, yyyy')}
-                              </div>
-                            </div>
-                          )}
-
-                          <div
-                            className="rounded-3xl"
-                            style={{
-                              background: GLASS_BG,
-                              backdropFilter: GLASS_BLUR,
-                              WebkitBackdropFilter: GLASS_BLUR,
-                              border: '1px solid rgba(255, 255, 255, 0.55)',
-                              boxShadow: '0 18px 50px rgba(0,0,0,0.10)',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            <div className="flex items-start gap-3 p-4">
-                              <div
-                                style={{
-                                  width: 4,
-                                  alignSelf: 'stretch',
-                                  borderRadius: 9999,
-                                  background: PINK,
-                                  boxShadow: `0 0 14px ${PINK}55`,
-                                  marginTop: 2,
-                                }}
-                              />
-
-                              <div
-                                className="flex-1 cursor-pointer"
-                                onClick={() => handleView(reflection)}
-                              >
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Utensils size={16} strokeWidth={2} style={{ color: TEXT, opacity: 0.85 }} />
-                                  <span className="text-xs font-semibold" style={{ color: 'rgba(74,74,74,0.75)' }}>
-                                    {mealTypeLabel}
-                                  </span>
-                                  <span className="text-xs" style={{ color: 'rgba(74,74,74,0.55)' }}>
-                                    {reflectionTypeLabel}
-                                  </span>
-                                </div>
-
-                                <div className="text-sm font-semibold" style={{ color: TEXT }}>
-                                  {reflection.notes || mealTypeLabel}
-                                </div>
-
-                                {reflection.aiAnalysis && (
-                                  <div className="text-xs mt-1" style={{ color: 'rgba(74,74,74,0.75)' }}>
-                                    {t('nutrition.record.aiAnalysis')}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Delete button */}
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteConfirm({
-                                      id: reflection.id,
-                                      title: `${mealTypeLabel} - ${reflectionTypeLabel}`,
-                                    });
-                                  }}
-                                  className="touch-target rounded-full flex items-center justify-center"
-                                  style={{
-                                    width: 44,
-                                    height: 44,
-                                    background: GLASS_BG,
-                                    border: '1px solid rgba(255, 255, 255, 0.55)',
-                                    backdropFilter: GLASS_BLUR,
-                                    WebkitBackdropFilter: GLASS_BLUR,
-                                    color: TEXT,
-                                  }}
-                                  aria-label={t('common.delete')}
-                                  title={t('common.delete')}
-                                >
-                                  <Trash2 size={18} strokeWidth={2} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-          </motion.div>
-        )}
-
-        {/* Day Detail View - when clicking a date from calendar */}
-        {viewMode === 'timeline' && selectedDate && (
+            {/* Glassmorphism Calendar container */}
             <motion.div
-              key={`timeline-${selectedDate}`}
+              className="mb-5"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              style={{
+                background: GLASS_BG,
+                backdropFilter: GLASS_BLUR,
+                WebkitBackdropFilter: GLASS_BLUR,
+                border: '1px solid rgba(255, 255, 255, 0.6)',
+                borderRadius: 24,
+                boxShadow: '0 18px 50px rgba(0,0,0,0.10)',
+                padding: 18,
+              }}
             >
-              {timelineItems.length === 0 ? (
-                <div
-                  style={{
-                    background: GLASS_BG,
-                    backdropFilter: GLASS_BLUR,
-                    WebkitBackdropFilter: GLASS_BLUR,
-                    border: '1px solid rgba(255, 255, 255, 0.6)',
-                    borderRadius: 24,
-                    boxShadow: '0 18px 50px rgba(0,0,0,0.10)',
-                    padding: 24,
-                    color: TEXT,
-                  }}
-                >
-                  {/* Bai Qi dialogue bubble for empty state - with avatar */}
-                  <div className="mb-6 flex items-start gap-3">
-                    {/* Character Avatar */}
-                    <div className="flex-shrink-0">
-                      <CharacterAvatar
-                        characterId="baiqi"
-                        characterState={characterState}
-                        size="md"
-                        showBadge={false}
-                      />
-                    </div>
-                    {/* Dialogue Bubble */}
-                    <div
-                      className="relative flex-1 px-5 py-4 rounded-2xl"
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.4)',
-                        backdropFilter: 'blur(30px)',
-                        borderRadius: '24px',
-                        border: '1px solid rgba(255, 255, 255, 0.55)',
-                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(255, 209, 220, 0.18)',
-                        color: TEXT,
-                      }}
-                    >
-                      <p className="text-sm leading-relaxed" style={{ color: TEXT }}>
-                        {locale === 'zh' 
-                          ? '今天还没来得及记录饮食吗？我很想知道你今天吃了什么。'
-                          : "Haven't recorded your meals today? I'd love to know what you ate."}
-                      </p>
-                    </div>
+              <div className="grid grid-cols-7 gap-2">
+                {weekDays.map(day => (
+                  <div
+                    key={day}
+                    className="text-center text-xs font-semibold py-1"
+                    style={{ color: 'rgba(74,74,74,0.75)' }}
+                  >
+                    {day}
                   </div>
+                ))}
+
+                {emptyDays.map((_, index) => (
+                  <div key={`empty-${index}`} className="aspect-square" />
+                ))}
+
+                {calendarDays.map(day => {
+                  const dayReflections = getItemsForDate(day);
+                  const hasReflections = dayReflections.length > 0;
+                  const today = isSameDay(day, new Date());
+                  const isFuture = isAfter(startOfDay(day), startOfDay(new Date()));
+
+                  // Determine glow color based on food reflections
+                  let glowColor: string | null = null;
+                  let glowShadow: string | null = null;
+                  let topGlowColor: string | null = null;
+
+                  if (hasReflections) {
+                    // Food reflections: pink
+                    glowColor =
+                      'linear-gradient(135deg, rgba(255,126,157,0.28) 0%, rgba(255,126,157,0.20) 100%)';
+                    glowShadow =
+                      '0 0 0 1px rgba(255,255,255,0.18) inset, 0 10px 24px rgba(255,126,157,0.25)';
+                    topGlowColor = 'rgba(255, 126, 157, 0.25)';
+                  } else if (today) {
+                    // Today but no records: white/grey
+                    glowColor = 'rgba(255, 255, 255, 0.25)';
+                    glowShadow =
+                      '0 0 0 1px rgba(255,255,255,0.3) inset, 0 8px 20px rgba(255,255,255,0.2)';
+                    topGlowColor = 'rgba(255, 255, 255, 0.3)';
+                  }
+
+                  return (
+                    <button
+                      key={day.toISOString()}
+                      onClick={() => handleDateClick(day)}
+                      disabled={isFuture}
+                      className="aspect-square rounded-2xl transition-transform active:scale-[0.98]"
+                      style={{
+                        border: 'none',
+                        background:
+                          today || hasReflections
+                            ? 'rgba(255, 255, 255, 0.16)'
+                            : 'rgba(255, 255, 255, 0.06)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        opacity: isFuture ? 0.4 : 1,
+                        cursor: isFuture ? 'not-allowed' : 'pointer',
+                      }}
+                      aria-label={`${t('nutrition.calendar.title')} ${format(day, 'yyyy-MM-dd')}`}
+                    >
+                      {glowColor && glowShadow && (
+                        <div
+                          className="absolute inset-0"
+                          style={{
+                            background: glowColor,
+                            boxShadow: glowShadow,
+                          }}
+                        />
+                      )}
+
+                      {topGlowColor && (
+                        <div
+                          className="absolute left-1/2 top-2 -translate-x-1/2"
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 9999,
+                            background: topGlowColor,
+                          }}
+                        />
+                      )}
+
+                      <div className="relative z-10 h-full w-full flex flex-col items-center justify-center">
+                        <div className="text-xs font-semibold" style={{ color: TEXT }}>
+                          {format(day, 'd')}
+                        </div>
+                        {hasReflections && (
+                          <div className="mt-1 flex items-center gap-1">
+                            <span
+                              title={`${dayReflections.length} ${t('nutrition.timeline.foodRecord')}`}
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: 9999,
+                                background: PINK,
+                                boxShadow: '0 0 12px rgba(255,126,157,0.55)',
+                                display: 'inline-block',
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+
+            {/* Legend redesign: dots */}
+            <div
+              className="mb-6"
+              style={{
+                background: GLASS_BG,
+                backdropFilter: GLASS_BLUR,
+                WebkitBackdropFilter: GLASS_BLUR,
+                border: '1px solid rgba(255, 255, 255, 0.55)',
+                borderRadius: 18,
+                padding: '12px 14px',
+              }}
+            >
+              <div
+                className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm"
+                style={{ color: TEXT }}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 9999,
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      boxShadow: '0 0 14px rgba(255,255,255,0.45)',
+                      display: 'inline-block',
+                    }}
+                  />
+                  <span style={{ opacity: 0.9 }}>{t('nutrition.calendar.today')}</span>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {timelineItems.map((reflection) => {
+                <div className="flex items-center gap-2">
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 9999,
+                      background: PINK,
+                      boxShadow: '0 0 14px rgba(255,126,157,0.45)',
+                      display: 'inline-block',
+                    }}
+                  />
+                  <span style={{ opacity: 0.9, color: TEXT }}>
+                    {t('nutrition.timeline.foodRecord')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Timeline list below calendar - show records for current month */}
+            {timelineItems.length > 0 && (
+              <div className="mt-6">
+                <div className="mb-3 text-sm font-semibold" style={{ color: '#FFFFFF' }}>
+                  {t('nutrition.calendar.viewTimeline')}
+                </div>
+                <div className="space-y-3">
+                  {timelineItems.map((reflection, index) => {
+                    const date = parseISO(reflection.date + 'T00:00:00');
+                    const isNewDay =
+                      index === 0 ||
+                      (timelineItems[index - 1] &&
+                        timelineItems[index - 1].date !== reflection.date);
+
                     const mealType = reflection.mealType || 'lunch';
                     const mealTypeLabel = t(`nutrition.record.mealType.${mealType}`);
                     const reflectionTypeLabel = t(`nutrition.record.${reflection.reflection}`);
 
                     return (
                       <div key={reflection.id}>
+                        {isNewDay && (
+                          <div className="px-2 mb-2">
+                            <div className="text-xs font-semibold" style={{ color: '#FFFFFF' }}>
+                              {format(
+                                date,
+                                locale === 'zh' ? 'yyyy年MM月dd日' : 'EEEE, MMMM d, yyyy'
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                         <div
                           className="rounded-3xl"
                           style={{
@@ -710,11 +662,15 @@ export default function NutritionTimelineScreen() {
                               onClick={() => handleView(reflection)}
                             >
                               <div className="flex items-center gap-2 mb-1">
-                                <Utensils size={16} strokeWidth={2} style={{ color: TEXT, opacity: 0.85 }} />
-                                <span className="text-xs font-semibold" style={{ color: 'rgba(74,74,74,0.75)' }}>
+                                <Utensils
+                                  size={16}
+                                  strokeWidth={2}
+                                  style={{ color: TEXT, opacity: 0.85 }}
+                                />
+                                <span className="text-xs font-semibold" style={{ color: TEXT }}>
                                   {mealTypeLabel}
                                 </span>
-                                <span className="text-xs" style={{ color: 'rgba(74,74,74,0.55)' }}>
+                                <span className="text-xs" style={{ color: 'rgba(74,74,74,0.75)' }}>
                                   {reflectionTypeLabel}
                                 </span>
                               </div>
@@ -724,8 +680,11 @@ export default function NutritionTimelineScreen() {
                               </div>
 
                               {reflection.aiAnalysis && (
-                                <div className="text-xs mt-2" style={{ color: 'rgba(74,74,74,0.75)' }}>
-                                  {reflection.aiAnalysis.encouragement}
+                                <div
+                                  className="text-xs mt-1"
+                                  style={{ color: 'rgba(74,74,74,0.75)' }}
+                                >
+                                  {t('nutrition.record.aiAnalysis')}
                                 </div>
                               )}
                             </div>
@@ -733,10 +692,12 @@ export default function NutritionTimelineScreen() {
                             {/* Delete button */}
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={(e) => {
+                                onClick={e => {
                                   e.stopPropagation();
                                   setDeleteConfirm({
                                     id: reflection.id,
+                                    date: reflection.date,
+                                    mealType: reflection.mealType,
                                     title: `${mealTypeLabel} - ${reflectionTypeLabel}`,
                                   });
                                 }}
@@ -762,16 +723,178 @@ export default function NutritionTimelineScreen() {
                     );
                   })}
                 </div>
-              )}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Day Detail View - when clicking a date from calendar */}
+        {viewMode === 'timeline' && selectedDate && (
+          <motion.div
+            key={`timeline-${selectedDate}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+          >
+            {timelineItems.length === 0 ? (
+              <div
+                style={{
+                  background: GLASS_BG,
+                  backdropFilter: GLASS_BLUR,
+                  WebkitBackdropFilter: GLASS_BLUR,
+                  border: '1px solid rgba(255, 255, 255, 0.6)',
+                  borderRadius: 24,
+                  boxShadow: '0 18px 50px rgba(0,0,0,0.10)',
+                  padding: 24,
+                  color: '#FFFFFF',
+                }}
+              >
+                {/* Bai Qi dialogue bubble for empty state - with avatar */}
+                <div className="mb-6 flex items-start gap-3">
+                  {/* Character Avatar */}
+                  <div className="flex-shrink-0">
+                    <CharacterAvatar
+                      characterId="baiqi"
+                      characterState={characterState}
+                      size="md"
+                      showBadge={false}
+                    />
+                  </div>
+                  {/* Dialogue Bubble */}
+                  <div
+                    className="relative flex-1 px-5 py-4 rounded-2xl"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.4)',
+                      backdropFilter: 'blur(30px)',
+                      borderRadius: '24px',
+                      border: '1px solid rgba(255, 255, 255, 0.55)',
+                      boxShadow:
+                        '0 10px 40px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(255, 209, 220, 0.18)',
+                      color: '#FFFFFF',
+                    }}
+                  >
+                    <p className="text-sm leading-relaxed" style={{ color: '#FFFFFF' }}>
+                      {locale === 'zh'
+                        ? '今天还没来得及记录饮食吗？我很想知道你今天吃了什么。'
+                        : "Haven't recorded your meals today? I'd love to know what you ate."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {timelineItems.map(reflection => {
+                  const mealType = reflection.mealType || 'lunch';
+                  const mealTypeLabel = t(`nutrition.record.mealType.${mealType}`);
+                  const reflectionTypeLabel = t(`nutrition.record.${reflection.reflection}`);
+
+                  return (
+                    <div key={reflection.id}>
+                      <div
+                        className="rounded-3xl"
+                        style={{
+                          background: GLASS_BG,
+                          backdropFilter: GLASS_BLUR,
+                          WebkitBackdropFilter: GLASS_BLUR,
+                          border: '1px solid rgba(255, 255, 255, 0.55)',
+                          boxShadow: '0 18px 50px rgba(0,0,0,0.10)',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div className="flex items-start gap-3 p-4">
+                          <div
+                            style={{
+                              width: 4,
+                              alignSelf: 'stretch',
+                              borderRadius: 9999,
+                              background: PINK,
+                              boxShadow: `0 0 14px ${PINK}55`,
+                              marginTop: 2,
+                            }}
+                          />
+
+                          <div
+                            className="flex-1 cursor-pointer"
+                            onClick={() => handleView(reflection)}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <Utensils
+                                size={16}
+                                strokeWidth={2}
+                                style={{ color: TEXT, opacity: 0.85 }}
+                              />
+                              <span className="text-xs font-semibold" style={{ color: TEXT }}>
+                                {mealTypeLabel}
+                              </span>
+                              <span className="text-xs" style={{ color: 'rgba(74,74,74,0.75)' }}>
+                                {reflectionTypeLabel}
+                              </span>
+                            </div>
+
+                            <div className="text-sm font-semibold" style={{ color: TEXT }}>
+                              {reflection.notes || mealTypeLabel}
+                            </div>
+
+                            {reflection.aiAnalysis && (
+                              <div
+                                className="text-xs mt-2"
+                                style={{ color: 'rgba(74,74,74,0.75)' }}
+                              >
+                                {reflection.aiAnalysis.encouragement}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Delete button */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={e => {
+                                e.stopPropagation();
+                                setDeleteConfirm({
+                                  id: reflection.id,
+                                  date: reflection.date,
+                                  mealType: reflection.mealType,
+                                  title: `${mealTypeLabel} - ${reflectionTypeLabel}`,
+                                });
+                              }}
+                              className="touch-target rounded-full flex items-center justify-center"
+                              style={{
+                                width: 44,
+                                height: 44,
+                                background: GLASS_BG,
+                                border: '1px solid rgba(255, 255, 255, 0.55)',
+                                backdropFilter: GLASS_BLUR,
+                                WebkitBackdropFilter: GLASS_BLUR,
+                                color: TEXT,
+                              }}
+                              aria-label={t('common.delete')}
+                              title={t('common.delete')}
+                            >
+                              <Trash2 size={18} strokeWidth={2} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </motion.div>
         )}
       </div>
 
       {/* Fixed bottom action button */}
-      {!(!loading && timelineItems.length === 0 && !selectedDate && reflections.length === 0) && (
+      {!(
+        !loading &&
+        timelineItems.length === 0 &&
+        !selectedDate &&
+        monthReflections.length === 0
+      ) && (
         <div
           className="fixed bottom-0 left-0 right-0 z-40 w-full"
-          style={{ 
+          style={{
             paddingBottom: `calc(1rem + env(safe-area-inset-bottom))`,
             paddingLeft: '20px',
             paddingRight: '20px',
@@ -793,13 +916,9 @@ export default function NutritionTimelineScreen() {
               onClick={() => {
                 // If viewing a specific date, pass it as a parameter
                 if (selectedDate) {
-                  const hour = new Date().getHours();
-                  let defaultMealType = 'lunch';
-                  if (hour >= 6 && hour < 10) defaultMealType = 'breakfast';
-                  else if (hour >= 10 && hour < 14) defaultMealType = 'lunch';
-                  else if (hour >= 14 && hour < 20) defaultMealType = 'dinner';
-                  else defaultMealType = 'snack';
-                  navigate(`/nutrition/reflection?date=${selectedDate}&mealType=${defaultMealType}`);
+                  navigate(
+                    `/nutrition/reflection?date=${selectedDate}&mealType=${getDefaultMealType()}`
+                  );
                 } else {
                   navigate('/nutrition/reflection');
                 }
@@ -847,14 +966,17 @@ export default function NutritionTimelineScreen() {
                 <X size={18} strokeWidth={2} />
               </button>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div
+              className="flex gap-2 overflow-x-auto pb-2"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               {Array.from({ length: 30 }, (_, i) => {
                 const date = subDays(new Date(), i);
                 const dateStr = format(date, 'yyyy-MM-dd');
                 const isSelected = selectedDate === dateStr;
                 // Check if this date has any reflections
-                const dateHasReflections = reflections.some(r => r.date === dateStr);
-                
+                const dateHasReflections = recentReflections.some(r => r.date === dateStr);
+
                 return (
                   <button
                     key={dateStr}
