@@ -15,7 +15,7 @@ export default function HealthCalendarScreen() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const monthKey = format(currentMonth, 'yyyy-MM');
 
-  const BAIQI_IMAGE_URL =
+  const CHARACTER_IMAGE_URL =
     '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
 
   const GLASS_BG = 'rgba(255, 255, 255, 0.2)';
@@ -85,11 +85,11 @@ export default function HealthCalendarScreen() {
 
   return (
     <div className="min-h-screen overflow-hidden">
-      {/* Visual Foundation: Bai Qi illustration as blurred base layer */}
+      {/* Visual Foundation: Character illustration as blurred base layer */}
       <div className="fixed inset-0">
         <img
-          src={BAIQI_IMAGE_URL}
-          alt="Bai Qi background"
+          src={CHARACTER_IMAGE_URL}
+          alt="Character background"
           className="w-full h-full object-cover"
           style={{
             filter: 'blur(10px)',

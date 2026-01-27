@@ -414,7 +414,7 @@ export const en = {
   },
   companion: {
     title: 'Companion',
-    characterName: 'Bai Qi',
+    characterName: 'I',
     send: 'Send',
     typeMessage: 'Type a message...',
     generating: 'Generating response...',

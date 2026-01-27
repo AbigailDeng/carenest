@@ -236,7 +236,7 @@ export default function HomeScreen() {
   };
 
 
-  // Background image URL - use specified character illustration (白起立绘)
+  // Background image URL - use specified character illustration (角色立绘)
   const backgroundImageUrl = '/images/DM_20260123234921_001.jpg';
 
   return (
@@ -252,7 +252,7 @@ export default function HomeScreen() {
         background: 'transparent',
       }}
     >
-      {/* ImageBackground - 最底层唯一的白起立绘 - 纯装饰，无交互 */}
+      {/* ImageBackground - 最底层唯一的角色立绘 - 纯装饰，无交互 */}
       <ImageBackground imageUrl={backgroundImageUrl} />
 
       {/* Minimal transparent title (replaces ugly white bar) */}
@@ -281,7 +281,7 @@ export default function HomeScreen() {
         onEmotionClick={() => handleFunctionClick('emotion')}
       />
 
-      {/* Single latest dialogue bubble (focus on Baiqi face) */}
+      {/* Single latest dialogue bubble (focus on character face) */}
       <div
         className="fixed left-0 right-0 z-20 flex justify-center px-4"
         style={{

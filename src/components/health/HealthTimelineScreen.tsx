@@ -33,7 +33,7 @@ export default function HealthTimelineScreen() {
   } | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const BAIQI_IMAGE_URL =
+  const CHARACTER_IMAGE_URL =
     '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
   // Enhanced glassmorphism: brighter, more saturated (fix muddy glass)
   const GLASS_BG = 'rgba(255, 255, 255, 0.32)';
@@ -421,8 +421,8 @@ export default function HealthTimelineScreen() {
   if (loading) {
     return (
       <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
-        {/* ImageBackground - 最底层唯一的白起立绘 */}
-        <ImageBackground imageUrl={BAIQI_IMAGE_URL} />
+        {/* ImageBackground - 最底层唯一的角色立绘 */}
+        <ImageBackground imageUrl={CHARACTER_IMAGE_URL} />
         <div className="relative z-10 w-full" style={{ 
           paddingTop: 'calc(env(safe-area-inset-top) + 112px)',
           paddingLeft: '20px',
@@ -448,8 +448,8 @@ export default function HealthTimelineScreen() {
 
   return (
     <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
-      {/* ImageBackground - 最底层唯一的白起立绘 */}
-      <ImageBackground imageUrl={BAIQI_IMAGE_URL} />
+      {/* ImageBackground - 最底层唯一的角色立绘 */}
+      <ImageBackground imageUrl={CHARACTER_IMAGE_URL} />
 
       {/* Back button - top-left corner */}
       <motion.button
@@ -850,6 +850,7 @@ export default function HealthTimelineScreen() {
 
                               <div
                                 className="flex-1 cursor-pointer"
+                                style={{ minWidth: 0 }}
                                 onClick={() => {
                                   sessionStorage.setItem('timelineViewMode', viewMode);
                                   handleView(item);
@@ -867,7 +868,16 @@ export default function HealthTimelineScreen() {
                                   </span>
                                 </div>
 
-                                <div className="text-sm font-semibold" style={{ color: TEXT }}>
+                                <div 
+                                  className="text-sm font-semibold" 
+                                  style={{ 
+                                    color: TEXT,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                  title={item.title}
+                                >
                                   {item.title}
                                 </div>
 
@@ -946,7 +956,7 @@ export default function HealthTimelineScreen() {
                     color: TEXT,
                   }}
                 >
-                  {/* Bai Qi dialogue bubble for empty state - with avatar */}
+                  {/* Character dialogue bubble for empty state - with avatar */}
                   <div className="mb-6 flex items-start gap-3">
                     {/* Character Avatar */}
                     <div className="flex-shrink-0">
@@ -1028,6 +1038,7 @@ export default function HealthTimelineScreen() {
 
                             <div
                               className="flex-1 cursor-pointer"
+                              style={{ minWidth: 0 }}
                               onClick={() => {
                                 sessionStorage.setItem('timelineViewMode', viewMode);
                                 handleView(item);
@@ -1045,7 +1056,16 @@ export default function HealthTimelineScreen() {
                                 </span>
                               </div>
 
-                              <div className="text-sm font-semibold" style={{ color: TEXT }}>
+                              <div 
+                                className="text-sm font-semibold" 
+                                style={{ 
+                                  color: TEXT,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                                title={item.title}
+                              >
                                 {item.title}
                               </div>
 

@@ -22,7 +22,7 @@ export default function FoodReflectionScreen() {
   const { loading, analyzeReflection, saveReflection, getReflectionForDateAndMeal } =
     useFoodReflection();
 
-  // Background image URL - nutrition-specific Bai Qi illustration
+  // Background image URL - nutrition-specific character illustration
   const BACKGROUND_URL = '/images/008fP45sly1hreaeb88b2j323s35s1l1.jpg';
 
   // Premium glassmorphism constants - improved readability
@@ -127,6 +127,9 @@ export default function FoodReflectionScreen() {
           detail: { date: selectedDate, mealType: selectedMealType },
         })
       );
+
+      // Navigate to detail page after saving
+      navigate(`/nutrition/reflection/${savedRecord.id}`);
     } catch (err: any) {
       setError(err.message || t('nutrition.record.failedToSave'));
     } finally {
@@ -190,7 +193,7 @@ export default function FoodReflectionScreen() {
         background: 'transparent',
       }}
     >
-      {/* ImageBackground - nutrition-specific Bai Qi illustration */}
+      {/* ImageBackground - nutrition-specific character illustration */}
       <ImageBackground imageUrl={BACKGROUND_URL} />
 
       {/* Floating Particles */}
@@ -200,7 +203,7 @@ export default function FoodReflectionScreen() {
 
       {/* Glassmorphism back button */}
       <button
-        onClick={() => navigate('/nutrition/timeline')}
+        onClick={() => navigate(-1)}
         className="fixed top-5 left-5 z-50 rounded-full flex items-center justify-center transition-all duration-200 touch-target"
         style={{
           width: '44px',
@@ -226,7 +229,7 @@ export default function FoodReflectionScreen() {
         />
       )}
 
-      {/* Character dialogue bubble - positioned at Bai Qi's shoulder level, left-aligned */}
+      {/* Character dialogue bubble - positioned at character's shoulder level, left-aligned */}
       <div
         className="fixed left-0 right-0 z-40 flex justify-start w-full"
         style={{
@@ -545,7 +548,7 @@ export default function FoodReflectionScreen() {
             <div className="flex-1">
               <button
                 type="button"
-                onClick={() => navigate('/nutrition/timeline')}
+                onClick={() => navigate(-1)}
                 disabled={analyzing || saving}
                 className="w-full px-4 py-3 rounded-xl font-semibold transition-all disabled:opacity-40"
                 style={{

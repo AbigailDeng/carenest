@@ -49,7 +49,7 @@ export default function NutritionInputScreen() {
     }
   }, []);
   
-  // Background image URL - nutrition-specific Bai Qi illustration
+  // Background image URL - nutrition-specific character illustration
   const BACKGROUND_URL = '/images/008fP45sly1hreaeb88b2j323s35s1l1.jpg';
 
   // Premium glassmorphism constants - improved readability
@@ -176,7 +176,7 @@ export default function NutritionInputScreen() {
         background: 'transparent',
       }}
     >
-      {/* ImageBackground - nutrition-specific Bai Qi illustration */}
+      {/* ImageBackground - nutrition-specific character illustration */}
       <ImageBackground imageUrl={BACKGROUND_URL} />
 
       {/* Floating Particles */}
@@ -202,7 +202,7 @@ export default function NutritionInputScreen() {
         <ChevronLeft size={24} strokeWidth={2} />
       </button>
 
-      {/* Character dialogue bubble - positioned at Bai Qi's shoulder level, left-aligned */}
+      {/* Character dialogue bubble - positioned at character's shoulder level, left-aligned */}
       <div
         className="fixed left-0 right-0 z-40 flex justify-start w-full"
         style={{

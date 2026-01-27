@@ -6,7 +6,6 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { FoodReflection } from '../../types';
 import { getEntity } from '../../services/storage/indexedDB';
 import AIIndicator from '../shared/AIIndicator';
-import Disclaimer from '../shared/Disclaimer';
 import ImageBackground from '../shared/ImageBackground';
 import FloatingParticles from '../companion/FloatingParticles';
 
@@ -18,7 +17,7 @@ export default function NutritionReflectionDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Background image URL - nutrition-specific Bai Qi illustration
+  // Background image URL - nutrition-specific character illustration
   const BACKGROUND_IMAGE_URL = '/images/008fP45sly1hreaeb88b2j323s35s1l1.jpg';
 
   // Card styling - solid background for better readability (same as SymptomAnalysisScreen)
@@ -90,7 +89,7 @@ export default function NutritionReflectionDetailScreen() {
           padding: 0,
         }}
       >
-        {/* ImageBackground - nutrition-specific Bai Qi illustration */}
+        {/* ImageBackground - nutrition-specific character illustration */}
         <ImageBackground imageUrl={BACKGROUND_IMAGE_URL} />
         <div
           className="relative flex items-center justify-center z-10"
@@ -120,7 +119,7 @@ export default function NutritionReflectionDetailScreen() {
           padding: 0,
         }}
       >
-        {/* ImageBackground - nutrition-specific Bai Qi illustration */}
+        {/* ImageBackground - nutrition-specific character illustration */}
         <ImageBackground imageUrl={BACKGROUND_IMAGE_URL} />
         <div
           className="relative min-h-screen py-6 z-10 w-full"
@@ -170,7 +169,7 @@ export default function NutritionReflectionDetailScreen() {
         padding: 0,
       }}
     >
-      {/* ImageBackground - nutrition-specific Bai Qi illustration */}
+      {/* ImageBackground - nutrition-specific character illustration */}
       <ImageBackground imageUrl={BACKGROUND_IMAGE_URL} />
 
       {/* Floating Particles */}
@@ -415,39 +414,8 @@ export default function NutritionReflectionDetailScreen() {
                     {aiAnalysis.suitability}
                   </p>
                 </div>
-
-                {/* Disclaimer Card */}
-                <div
-                  className="p-5 rounded-2xl"
-                  style={{
-                    background: CARD_BG,
-                    border: CARD_BORDER,
-                    boxShadow: CARD_SHADOW,
-                    borderRadius: '16px',
-                  }}
-                >
-                  <p
-                    className="text-sm italic leading-relaxed"
-                    style={{ color: '#2A2A2A', opacity: 0.8 }}
-                  >
-                    {aiAnalysis.disclaimer}
-                  </p>
-                </div>
               </>
             )}
-
-            {/* Medical Disclaimer */}
-            <div
-              className="p-5 rounded-2xl"
-              style={{
-                background: CARD_BG,
-                border: CARD_BORDER,
-                boxShadow: CARD_SHADOW,
-                borderRadius: '16px',
-              }}
-            >
-              <Disclaimer type="medical" />
-            </div>
           </div>
         </div>
       </div>

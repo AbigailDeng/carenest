@@ -38,10 +38,10 @@ export default function SymptomLogScreen() {
   const [loadingEntry, setLoadingEntry] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0); // Dynamic placeholder rotation - FR-037(3)
 
-  // Background image URL - Bai Qi illustration
+  // Background image URL - character illustration
   const BACKGROUND_URL = '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
 
-  // Premium glassmorphism constants - FR-037(2) "Baiqi's Private Consultation Room"
+  // Premium glassmorphism constants - FR-037(2) "Private Consultation Room"
   const GLASS_BG = 'rgba(255, 255, 255, 0.15)'; // Premium transparency, no gray
   const GLASS_BLUR = 'blur(35px)'; // Enhanced blur for premium effect
   const GLASS_BORDER = '1.5px solid rgba(255, 255, 255, 0.4)'; // White glowing border
@@ -303,7 +303,7 @@ export default function SymptomLogScreen() {
   if (loadingEntry) {
     return (
       <div className="relative min-h-screen" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
-        {/* ImageBackground - 最底层唯一的白起立绘 */}
+        {/* ImageBackground - 最底层唯一的角色立绘 */}
         <ImageBackground imageUrl={BACKGROUND_URL} />
         <div className="relative flex items-center justify-center z-10" style={{ minHeight: '100vh' }}>
           <div className="text-center">
@@ -316,7 +316,7 @@ export default function SymptomLogScreen() {
 
   return (
     <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0, background: 'transparent' }}>
-      {/* ImageBackground - 最底层唯一的白起立绘 */}
+      {/* ImageBackground - 最底层唯一的角色立绘 */}
       <ImageBackground imageUrl={BACKGROUND_URL} />
 
       {/* Minimal premium glassmorphism back button - FR-037(5) */}
@@ -337,7 +337,7 @@ export default function SymptomLogScreen() {
           <ChevronLeft size={24} strokeWidth={2} />
       </button>
 
-      {/* Character dialogue bubble - positioned at Bai Qi's shoulder level with avatar icon, left-aligned to avoid overlapping input area - FR-037(7) */}
+      {/* Character dialogue bubble - positioned at character's shoulder level with avatar icon, left-aligned to avoid overlapping input area - FR-037(7) */}
       {/* When AI analysis completes, this bubble REPLACES the initial prompt with AI conclusion */}
       {/* CRITICAL: Position must ensure NO overlap with input area below */}
       <div className="fixed left-0 right-0 z-40 flex justify-start w-full" style={{

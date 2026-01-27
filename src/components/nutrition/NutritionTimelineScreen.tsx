@@ -255,10 +255,21 @@ export default function NutritionTimelineScreen() {
       });
     } else {
       // Calendar view: show reflections for current month
+      // Sort by date (newest first), and for same day, sort by meal type order (breakfast, lunch, dinner, snack)
+      const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
       return [...monthItems].sort((a, b) => {
         const dateA = parseISO(a.date + 'T00:00:00');
         const dateB = parseISO(b.date + 'T00:00:00');
-        return dateB.getTime() - dateA.getTime();
+        const dateDiff = dateB.getTime() - dateA.getTime();
+        
+        // If same day, sort by meal type order
+        if (dateDiff === 0) {
+          const aIndex = mealOrder.indexOf(a.mealType || 'lunch');
+          const bIndex = mealOrder.indexOf(b.mealType || 'lunch');
+          return aIndex - bIndex;
+        }
+        
+        return dateDiff;
       });
     }
   }, [dayReflections, monthItems, selectedDate, loadingMonth, loadingDay]);
@@ -317,7 +328,7 @@ export default function NutritionTimelineScreen() {
         padding: 0,
       }}
     >
-      {/* ImageBackground - nutrition-specific Bai Qi illustration */}
+      {/* ImageBackground - nutrition-specific character illustration */}
       <ImageBackground imageUrl={NUTRITION_BACKGROUND_URL} />
 
       {/* Floating Particles */}
@@ -750,7 +761,7 @@ export default function NutritionTimelineScreen() {
                   color: '#FFFFFF',
                 }}
               >
-                {/* Bai Qi dialogue bubble for empty state - with avatar */}
+                {/* Character dialogue bubble for empty state - with avatar */}
                 <div className="mb-6 flex items-start gap-3">
                   {/* Character Avatar */}
                   <div className="flex-shrink-0">

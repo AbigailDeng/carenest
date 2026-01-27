@@ -161,7 +161,7 @@ function HealthHomeScreen() {
         padding: 0,
       }}
     >
-      {/* ImageBackground - 最底层唯一的白起立绘 */}
+      {/* ImageBackground - 最底层唯一的角色立绘 */}
       <ImageBackground imageUrl={HOME_SCREEN_BACKGROUND_URL} />
 
       {/* Floating Particles - FR-036(1) */}
@@ -390,7 +390,7 @@ function NutritionHomeScreen() {
         padding: 0,
       }}
     >
-      {/* ImageBackground - 最底层唯一的白起立绘 (nutrition-specific) */}
+      {/* ImageBackground - 最底层唯一的角色立绘 (nutrition-specific) */}
       <ImageBackground imageUrl={NUTRITION_BACKGROUND_URL} />
 
       {/* Floating Particles - FR-036(1) */}

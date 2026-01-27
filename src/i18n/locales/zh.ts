@@ -406,7 +406,7 @@ export const zh = {
   },
   companion: {
     title: '陪伴',
-    characterName: '白起',
+    characterName: '我',
     send: '发送',
     typeMessage: '输入消息...',
     generating: '正在生成回复...',
