@@ -17,7 +17,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PROXY_PORT || 3001;
+const PORT = process.env.PORT || process.env.PROXY_PORT || 8080;
 
 // Middleware
 app.use(cors());
