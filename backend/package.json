@@ -5,6 +5,7 @@
   "description": "AI-powered personal health companion app - Backend API",
   "main": "src/index.js",
   "scripts": {
+    "build": "echo 'No build needed for backend'",
     "dev": "node src/proxy-server.js",
     "start": "node src/proxy-server.js",
     "lint": "eslint . --ext ts,js --report-unused-disable-directives --max-warnings 0",
