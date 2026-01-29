@@ -18,23 +18,59 @@ AI-powered personal health companion app for tracking health, nutrition, and emo
 
 2. **Configure environment variables:**
    
-   Create a `.env` file in the root directory (see `.env.example` for template):
+   **For local development**, create a `.env` file in the root directory (see `.env.example` for template):
    ```bash
-   VITE_LLM_BASE_URL=https://hyperecho-proxy.aelf.dev/v1
-   VITE_LLM_API_KEY=your-api-key-here
-   VITE_LLM_MODEL=vibe-coding-app-gemini
+   LLM_API_KEY=your-api-key-here
+   LLM_BASE_URL=https://hyperecho-proxy.aelf.dev/v1
+   LLM_MODEL=vibe-coding-app-gemini
    ```
    
-   **Important**: Never commit your `.env` file to git. It contains sensitive API keys.
+   **For production deployment on Vercel:**
+   - Go to your Vercel project settings → Environment Variables
+   - Add these as **server-side** environment variables (NOT `VITE_*` prefix):
+     - `LLM_API_KEY`: Your actual API key
+     - `LLM_BASE_URL`: `https://hyperecho-proxy.aelf.dev/v1` (optional, has default)
+     - `LLM_MODEL`: `vibe-coding-app-gemini` (optional, has default)
+   
+   **Important**: 
+   - Never commit your `.env` file to git. It contains sensitive API keys.
+   - The API key is now stored securely on the server side and never exposed to the client.
 
 3. **Start development server:**
+   
+   **方法 1：使用独立代理服务器（推荐，支持任何部署平台）**
+   
    ```bash
+   # 同时启动代理服务器和前端开发服务器
    npm run dev
+   ```
+   
+   这会启动：
+   - 代理服务器：`http://localhost:3001`（处理 `/api/llm-proxy`）
+   - 前端服务器：`http://localhost:3000`（Vite 开发服务器）
+   
+   **方法 2：使用 Vercel CLI（仅限 Vercel 用户）**
+   
+   ```bash
+   npm install -g vercel
+   npm run dev:vercel
+   ```
+   
+   **方法 3：分别启动（用于调试）**
+   
+   ```bash
+   # 终端 1：启动代理服务器
+   npm run dev:proxy
+   
+   # 终端 2：启动前端服务器
+   npm run dev:vite
    ```
 
 4. **Open in browser:**
    
    The app will open automatically at `http://localhost:3000`
+   
+   **测试 API：** 打开浏览器开发者工具 → Network，触发 LLM 功能，应该看到请求发送到 `/api/llm-proxy`（不是 404）。
 
 ## 📱 Features
 

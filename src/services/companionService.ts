@@ -10,10 +10,10 @@ import {
 } from '../types';
 import { apiRequest, ApiError } from './apiClient';
 
-// LLM API Configuration (same as llmService)
-const LLM_BASE_URL = import.meta.env.VITE_LLM_BASE_URL || 'https://hyperecho-proxy.aelf.dev/v1';
-const LLM_API_KEY = import.meta.env.VITE_LLM_API_KEY;
-const LLM_MODEL = import.meta.env.VITE_LLM_MODEL || 'vibe-coding-app-gemini';
+// LLM API Configuration
+// Use server-side proxy to protect API key (no client-side API key needed)
+// In production, this can be configured via VITE_PROXY_URL environment variable
+const LLM_PROXY_URL = import.meta.env.VITE_PROXY_URL || '/api/llm-proxy';
 
 // Safety guardrails for companion dialogue
 const COMPANION_SAFETY_GUARDRAILS = `
@@ -237,24 +237,18 @@ export function selectDialogueTemplate(input: CompanionDialogueInput): string {
  * Call LLM API for dialogue generation
  */
 async function callLLMForDialogue(prompt: string): Promise<string> {
-  if (!LLM_API_KEY) {
-    throw new Error('LLM API key not configured');
-  }
-
-  console.log('[companionService] Making LLM API request...', {
-    url: LLM_BASE_URL,
-    model: LLM_MODEL,
+  console.log('[companionService] Making LLM API request via proxy...', {
+    url: LLM_PROXY_URL,
     promptLength: prompt.length,
   });
 
-  const response = await apiRequest(`${LLM_BASE_URL}/chat/completions`, {
+  // Call server-side proxy API (API key is stored securely on server)
+  const response = await apiRequest(LLM_PROXY_URL, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${LLM_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: LLM_MODEL,
       messages: [
         { role: 'system', content: COMPANION_SAFETY_GUARDRAILS },
         { role: 'user', content: prompt },

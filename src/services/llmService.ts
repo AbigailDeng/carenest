@@ -2,9 +2,10 @@ import { apiRequest, ApiError } from './apiClient';
 import { getEntity } from '../services/storage/indexedDB';
 
 // LLM API Configuration
-const LLM_BASE_URL = import.meta.env.VITE_LLM_BASE_URL || 'https://hyperecho-proxy.aelf.dev/v1';
-const LLM_API_KEY = import.meta.env.VITE_LLM_API_KEY;
-const LLM_MODEL = import.meta.env.VITE_LLM_MODEL || 'vibe-coding-app-gemini';
+// Use server-side proxy to protect API key (no client-side API key needed)
+// In production, this can be configured via VITE_PROXY_URL environment variable
+// If not set, defaults to relative path (works with Vercel, Netlify, etc.)
+const LLM_PROXY_URL = import.meta.env.VITE_PROXY_URL || '/api/llm-proxy';
 
 // Safety guardrails for all prompts
 const SAFETY_GUARDRAILS = `
@@ -105,7 +106,6 @@ export interface FoodReflectionAnalysisOutput {
   disclaimer: string; // Required disclaimer
 }
 
-
 /**
  * Check if user has consented to data sharing
  */
@@ -126,14 +126,6 @@ async function callLLM(
   temperature: number = 0.7,
   maxTokens: number = 2000
 ): Promise<any> {
-  if (!LLM_API_KEY) {
-    throw {
-      code: 'CONFIG_ERROR',
-      message: 'LLM API key not configured',
-      retryable: false,
-    } as ApiError;
-  }
-
   // Auto-grant consent when user actively uses AI features
   // Uploading files or calling AI services implies consent
   const hasConsent = await checkUserConsent();
@@ -155,14 +147,13 @@ async function callLLM(
     }
   }
 
-  const response = await apiRequest(`${LLM_BASE_URL}/chat/completions`, {
+  // Call server-side proxy API (API key is stored securely on server)
+  const response = await apiRequest(LLM_PROXY_URL, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${LLM_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: LLM_MODEL,
       messages,
       temperature,
       max_tokens: maxTokens,
@@ -183,12 +174,12 @@ async function callLLM(
       retryable: true,
     } as ApiError;
   }
-  
+
   // Log full response for debugging (only in development)
   if (import.meta.env.DEV) {
     console.log('LLM API full response:', JSON.stringify(data, null, 2));
   }
-  
+
   // Check for API errors
   if (data.error) {
     const errorMessage = data.error.message || data.error || 'LLM processing failed';
@@ -217,11 +208,12 @@ async function callLLM(
         }
       }
     }
-    
+
     console.error('LLM response has no valid content structure:', data);
     throw {
       code: 'LLM_ERROR',
-      message: 'Gemini response contained no valid content. The API returned an empty or invalid response structure.',
+      message:
+        'Gemini response contained no valid content. The API returned an empty or invalid response structure.',
       retryable: true,
     } as ApiError;
   }
@@ -238,7 +230,7 @@ async function callLLM(
 
   // Handle different message formats
   let content: string | null = null;
-  
+
   if (firstChoice.message && firstChoice.message.content) {
     content = firstChoice.message.content;
   } else if (firstChoice.text) {
@@ -246,9 +238,10 @@ async function callLLM(
     content = firstChoice.text;
   } else if (firstChoice.content) {
     // Another alternative format
-    content = typeof firstChoice.content === 'string' 
-      ? firstChoice.content 
-      : firstChoice.content.text || '';
+    content =
+      typeof firstChoice.content === 'string'
+        ? firstChoice.content
+        : firstChoice.content.text || '';
   }
 
   if (!content || !content.trim()) {
@@ -258,7 +251,8 @@ async function callLLM(
     });
     throw {
       code: 'LLM_ERROR',
-      message: 'Gemini response contained no valid content. The response was empty or content field was missing.',
+      message:
+        'Gemini response contained no valid content. The response was empty or content field was missing.',
       retryable: true,
     } as ApiError;
   }
@@ -272,7 +266,7 @@ async function callLLM(
 function extractJSON(text: string, startChar: '{' | '[', endChar: '}' | ']'): string | null {
   let depth = 0;
   let startIndex = -1;
-  
+
   for (let i = 0; i < text.length; i++) {
     if (text[i] === startChar) {
       if (depth === 0) {
@@ -286,7 +280,7 @@ function extractJSON(text: string, startChar: '{' | '[', endChar: '}' | ']'): st
       }
     }
   }
-  
+
   return null;
 }
 
@@ -342,17 +336,21 @@ function parseLLMResponse(content: string): any {
 
   // Strategy 4: Fallback - try to extract structured data from text
   console.warn('JSON parsing failed, attempting text extraction');
-  
+
   const extracted: any = {};
-  
+
   // Try to extract observations
-  const observationsMatch = cleaned.match(/(?:observations|观察|观察分析)[:：]\s*([^\n]+(?:\n(?!possibleCauses|suggestions|whenToSeekHelp|disclaimer|可能|建议|何时|免责)[^\n]+)*)/i);
+  const observationsMatch = cleaned.match(
+    /(?:observations|观察|观察分析)[:：]\s*([^\n]+(?:\n(?!possibleCauses|suggestions|whenToSeekHelp|disclaimer|可能|建议|何时|免责)[^\n]+)*)/i
+  );
   if (observationsMatch) {
     extracted.observations = observationsMatch[1].trim();
   }
-  
+
   // Try to extract possibleCauses (array) - handle multi-line arrays
-  const causesMatch = cleaned.match(/(?:possibleCauses|可能原因|可能的因素)[:：]\s*\[([\s\S]*?)\]/i);
+  const causesMatch = cleaned.match(
+    /(?:possibleCauses|可能原因|可能的因素)[:：]\s*\[([\s\S]*?)\]/i
+  );
   if (causesMatch) {
     const causesText = causesMatch[1];
     // Try to parse as JSON array first
@@ -363,11 +361,16 @@ function parseLLMResponse(content: string): any {
       // Fallback to simple split
       extracted.possibleCauses = causesText
         .split(/[,\n]/)
-        .map(item => item.trim().replace(/^["']|["']$/g, '').replace(/^["']|["']$/g, ''))
+        .map(item =>
+          item
+            .trim()
+            .replace(/^["']|["']$/g, '')
+            .replace(/^["']|["']$/g, '')
+        )
         .filter(item => item.length > 0);
     }
   }
-  
+
   // Try to extract suggestions (array) - handle multi-line arrays
   const suggestionsMatch = cleaned.match(/(?:suggestions|建议|支持性建议)[:：]\s*\[([\s\S]*?)\]/i);
   if (suggestionsMatch) {
@@ -380,28 +383,35 @@ function parseLLMResponse(content: string): any {
       // Fallback to simple split
       extracted.suggestions = suggestionsText
         .split(/[,\n]/)
-        .map(item => item.trim().replace(/^["']|["']$/g, '').replace(/^["']|["']$/g, ''))
+        .map(item =>
+          item
+            .trim()
+            .replace(/^["']|["']$/g, '')
+            .replace(/^["']|["']$/g, '')
+        )
         .filter(item => item.length > 0);
     }
   }
-  
+
   // Try to extract whenToSeekHelp
-  const seekHelpMatch = cleaned.match(/(?:whenToSeekHelp|何时寻求帮助|何时咨询)[:：]\s*([^\n]+(?:\n(?!disclaimer|免责)[^\n]+)*)/i);
+  const seekHelpMatch = cleaned.match(
+    /(?:whenToSeekHelp|何时寻求帮助|何时咨询)[:：]\s*([^\n]+(?:\n(?!disclaimer|免责)[^\n]+)*)/i
+  );
   if (seekHelpMatch) {
     extracted.whenToSeekHelp = seekHelpMatch[1].trim();
   }
-  
+
   // Try to extract disclaimer
   const disclaimerMatch = cleaned.match(/(?:disclaimer|免责声明)[:：]\s*([^\n]+(?:\n[^\n]+)*)/i);
   if (disclaimerMatch) {
     extracted.disclaimer = disclaimerMatch[1].trim();
   }
-  
+
   // If we extracted any fields, return them; otherwise return raw response
   if (Object.keys(extracted).length > 0) {
     return extracted;
   }
-  
+
   return { rawResponse: cleaned };
 }
 
@@ -412,7 +422,7 @@ async function getUserLanguage(): Promise<'zh' | 'en'> {
   try {
     const types = await import('../types');
     type UserPreferences = types.UserPreferences;
-    const preferences = await getEntity('userPreferences', 'singleton') as UserPreferences | null;
+    const preferences = (await getEntity('userPreferences', 'singleton')) as UserPreferences | null;
     return preferences?.language === 'zh' ? 'zh' : 'en';
   } catch {
     return 'en'; // Default to English
@@ -427,11 +437,11 @@ export async function summarizeMedicalRecord(
 ): Promise<MedicalRecordSummary> {
   const userLanguage = await getUserLanguage();
   const isChinese = userLanguage === 'zh';
-  
-  const languageInstruction = isChinese 
+
+  const languageInstruction = isChinese
     ? '请使用中文回复。所有内容必须使用简体中文。'
     : 'Please respond in English. All content must be in English.';
-  
+
   const prompt = `${SAFETY_GUARDRAILS}
 
 ${languageInstruction}
@@ -483,35 +493,43 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
   ]);
 
   const parsed = parseLLMResponse(response);
-  
+
   // Log parsed response for debugging
   console.log('Parsed LLM response for medical record:', parsed);
-  
-  const defaultObservations = isChinese 
-    ? '无法生成分析' 
-    : 'Unable to generate analysis';
+
+  const defaultObservations = isChinese ? '无法生成分析' : 'Unable to generate analysis';
   const defaultWhenToSeekHelp = isChinese
     ? '如果您对健康状况有担忧，请咨询医疗专业人员。'
     : 'If you have concerns about your health, please consult with a healthcare professional.';
   const defaultDisclaimer = isChinese
     ? '此信息仅供一般指导，不能替代专业医疗建议。'
     : 'This information is for general guidance only and is not a substitute for professional medical advice.';
-  
+
   // Extract fields with proper validation
   const observations = parsed.observations || parsed.plainLanguageSummary;
   const possibleCauses = Array.isArray(parsed.possibleCauses) ? parsed.possibleCauses : [];
   const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
   const whenToSeekHelp = parsed.whenToSeekHelp;
   const disclaimer = parsed.disclaimer;
-  
+
   // Only use rawResponse as last resort if we have no structured data at all
-  const finalObservations = observations || (parsed.rawResponse && possibleCauses.length === 0 && suggestions.length === 0 ? parsed.rawResponse : null) || defaultObservations;
-  
+  const finalObservations =
+    observations ||
+    (parsed.rawResponse && possibleCauses.length === 0 && suggestions.length === 0
+      ? parsed.rawResponse
+      : null) ||
+    defaultObservations;
+
   // Log warning if structure is incomplete
-  if (!observations && possibleCauses.length === 0 && suggestions.length === 0 && parsed.rawResponse) {
+  if (
+    !observations &&
+    possibleCauses.length === 0 &&
+    suggestions.length === 0 &&
+    parsed.rawResponse
+  ) {
     console.warn('LLM returned unstructured response. Attempting to parse:', parsed.rawResponse);
   }
-  
+
   return {
     observations: finalObservations,
     possibleCauses: possibleCauses,
@@ -526,23 +544,21 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
  * Analyze symptoms and provide observational insights and supportive suggestions
  * IMPORTANT: This is NOT a medical diagnosis, but observational analysis only
  */
-export async function analyzeSymptoms(
-  input: SymptomAnalysisInput
-): Promise<SymptomAnalysisOutput> {
+export async function analyzeSymptoms(input: SymptomAnalysisInput): Promise<SymptomAnalysisOutput> {
   const userLanguage = await getUserLanguage();
   const isChinese = userLanguage === 'zh';
-  
-  const languageInstruction = isChinese 
+
+  const languageInstruction = isChinese
     ? '请使用中文回复。所有内容必须使用简体中文。'
     : 'Please respond in English. All content must be in English.';
-  
+
   // Extract text from medical record images if provided
   let medicalRecordText = '';
   if (input.medicalRecordImages && input.medicalRecordImages.length > 0) {
     try {
       const { uploadFile } = await import('./fileUpload');
       const extractedTexts: string[] = [];
-      
+
       for (const imageFile of input.medicalRecordImages) {
         try {
           const result = await uploadFile(imageFile);
@@ -554,7 +570,7 @@ export async function analyzeSymptoms(
           // Continue with other images even if one fails
         }
       }
-      
+
       if (extractedTexts.length > 0) {
         medicalRecordText = extractedTexts.join('\n\n');
       }
@@ -563,12 +579,12 @@ export async function analyzeSymptoms(
       // Continue analysis with text only if image processing fails
     }
   }
-  
+
   // Combine user input and medical record text
   const combinedInput = medicalRecordText
     ? `${input.symptoms}\n\n[上传的病历内容：]\n${medicalRecordText}`
     : input.symptoms;
-  
+
   const prompt = `${SAFETY_GUARDRAILS}
 
 ${languageInstruction}
@@ -631,7 +647,8 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
     console.error('Failed to call LLM for symptom analysis:', error);
     throw {
       code: error.code || 'LLM_ERROR',
-      message: error.message || 'Failed to analyze symptoms. Please check your connection and try again.',
+      message:
+        error.message || 'Failed to analyze symptoms. Please check your connection and try again.',
       retryable: error.retryable !== false,
     } as ApiError;
   }
@@ -650,9 +667,7 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
   // Log parsed response for debugging
   console.log('Parsed LLM response:', parsed);
 
-  const defaultObservations = isChinese 
-    ? '分析完成' 
-    : 'Analysis completed';
+  const defaultObservations = isChinese ? '分析完成' : 'Analysis completed';
   const defaultWhenToSeekHelp = isChinese
     ? '如果症状持续或恶化，请咨询医疗专业人员。'
     : 'If symptoms persist or worsen, please consult a healthcare professional.';
@@ -667,15 +682,26 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
   const whenToSeekHelp = parsed?.whenToSeekHelp;
   const disclaimer = parsed?.disclaimer;
   // Extract severity - auto-assessed by AI from free-form text - FR-037(4)
-  const severity = (parsed?.severity === 'mild' || parsed?.severity === 'moderate' || parsed?.severity === 'severe') 
-    ? parsed.severity 
-    : null;
-  
+  const severity =
+    parsed?.severity === 'mild' || parsed?.severity === 'moderate' || parsed?.severity === 'severe'
+      ? parsed.severity
+      : null;
+
   // Only use rawResponse as last resort if we have no structured data at all
-  const finalObservations = observations || (parsed?.rawResponse && possibleCauses.length === 0 && suggestions.length === 0 ? parsed.rawResponse : null) || defaultObservations;
-  
+  const finalObservations =
+    observations ||
+    (parsed?.rawResponse && possibleCauses.length === 0 && suggestions.length === 0
+      ? parsed.rawResponse
+      : null) ||
+    defaultObservations;
+
   // Log warning if structure is incomplete
-  if (!observations && possibleCauses.length === 0 && suggestions.length === 0 && parsed?.rawResponse) {
+  if (
+    !observations &&
+    possibleCauses.length === 0 &&
+    suggestions.length === 0 &&
+    parsed?.rawResponse
+  ) {
     console.warn('LLM returned unstructured response. Attempting to parse:', parsed.rawResponse);
   }
 
@@ -740,9 +766,13 @@ export async function generateMealSuggestions(
 
 ${isChinese ? '你是一个支持性的营养伴侣，帮助用户找到简单、实用的餐食想法。请根据用户提供的食材，给出具体、可操作的餐食建议。' : 'You are a supportive nutrition companion helping users find simple, practical meal ideas. Based on the ingredients provided by the user, give specific, actionable meal suggestions.'}
 
-${lateNight ? (isChinese ? 
-  '\n[当前时间是深夜 - 晚上9点后]\n\n这是深夜时段。请提供温和、舒适的餐食建议，重点关注轻松、易于准备的选项。使用支持性、非评判性的语言。强调自我关怀和舒适，而不是严格的营养规则。不要对深夜进食进行评判。' :
-  '\n[Current time is late night - after 9 PM]\n\nThis is late night. Please provide gentle, comforting meal suggestions, focusing on light, easy-to-prepare options. Use supportive, non-judgmental language about eating times. Emphasize self-care and comfort, not strict nutrition rules. No judgment about late-night eating.') : ''}
+${
+  lateNight
+    ? isChinese
+      ? '\n[当前时间是深夜 - 晚上9点后]\n\n这是深夜时段。请提供温和、舒适的餐食建议，重点关注轻松、易于准备的选项。使用支持性、非评判性的语言。强调自我关怀和舒适，而不是严格的营养规则。不要对深夜进食进行评判。'
+      : '\n[Current time is late night - after 9 PM]\n\nThis is late night. Please provide gentle, comforting meal suggestions, focusing on light, easy-to-prepare options. Use supportive, non-judgmental language about eating times. Emphasize self-care and comfort, not strict nutrition rules. No judgment about late-night eating.'
+    : ''
+}
 
 ${isChinese ? '用户提供的可用食材（自由文本，请解析并识别其中的单个食材）：' : 'Available ingredients provided by the user (free-form text - please parse and identify individual ingredients from the text):'}
 ${trimmedIngredients}
@@ -751,16 +781,22 @@ ${isChinese ? '\n重要提示：请从上述文本中解析并识别出所有食
 
 ${adaptationContext ? `${isChinese ? '\n其他考虑因素：' : '\nAdditional considerations:'}\n${adaptationContext}` : ''}
 
-${flexible ? (isChinese ? 
-  `\n重要提示：你必须提供正好3道菜，并且要尽量使用识别出的食材。餐食建议应该：\n- 必须提供正好3道不同的菜品\n- 尽量使用从文本中识别出的食材（可以分散到3道菜中）\n- 同一食材可以在多道菜中重复使用\n- 可以添加常见的、容易获得的辅助食材（如盐、油、调味料等）\n- 如果某些食材难以获得，可以提供合理的替代方案\n- 确保建议的餐食是实际可行的，不要建议过于复杂或需要特殊设备的菜品\n- 优先考虑如何合理分配食材，让用户能够用这些食材做出3道不同的菜\n- 每道菜应该使用不同的主要食材组合，避免重复\n- 在返回的JSON数组中，确保3道菜使用的食材加起来覆盖了大部分或全部从文本中识别出的食材\n- 食材是建议，不是要求。餐食想法可以使用部分或全部识别出的食材。` :
-  `\nIMPORTANT: You must provide exactly 3 dishes and try to use the identified ingredients. Meal suggestions should:\n- Must provide exactly 3 different dishes\n- Try to use ingredients identified from the text (can be distributed across 3 dishes)\n- The same ingredient can be used in multiple dishes\n- May add common, easily available supporting ingredients (like salt, oil, seasonings, etc.)\n- If some ingredients are hard to find, provide reasonable alternatives\n- Ensure suggested meals are practical and feasible, do not suggest overly complex dishes or those requiring special equipment\n- Prioritize how to reasonably distribute ingredients so users can make 3 different dishes with these ingredients\n- Each dish should use different main ingredient combinations to avoid repetition\n- In the returned JSON array, ensure the 3 dishes together cover most or all of the identified ingredients\n- Ingredients are suggestions, not requirements. Meal ideas can use some or all of the identified ingredients.`) : ''}
+${
+  flexible
+    ? isChinese
+      ? `\n重要提示：你必须提供正好3道菜，并且要尽量使用识别出的食材。餐食建议应该：\n- 必须提供正好3道不同的菜品\n- 尽量使用从文本中识别出的食材（可以分散到3道菜中）\n- 同一食材可以在多道菜中重复使用\n- 可以添加常见的、容易获得的辅助食材（如盐、油、调味料等）\n- 如果某些食材难以获得，可以提供合理的替代方案\n- 确保建议的餐食是实际可行的，不要建议过于复杂或需要特殊设备的菜品\n- 优先考虑如何合理分配食材，让用户能够用这些食材做出3道不同的菜\n- 每道菜应该使用不同的主要食材组合，避免重复\n- 在返回的JSON数组中，确保3道菜使用的食材加起来覆盖了大部分或全部从文本中识别出的食材\n- 食材是建议，不是要求。餐食想法可以使用部分或全部识别出的食材。`
+      : `\nIMPORTANT: You must provide exactly 3 dishes and try to use the identified ingredients. Meal suggestions should:\n- Must provide exactly 3 different dishes\n- Try to use ingredients identified from the text (can be distributed across 3 dishes)\n- The same ingredient can be used in multiple dishes\n- May add common, easily available supporting ingredients (like salt, oil, seasonings, etc.)\n- If some ingredients are hard to find, provide reasonable alternatives\n- Ensure suggested meals are practical and feasible, do not suggest overly complex dishes or those requiring special equipment\n- Prioritize how to reasonably distribute ingredients so users can make 3 different dishes with these ingredients\n- Each dish should use different main ingredient combinations to avoid repetition\n- In the returned JSON array, ensure the 3 dishes together cover most or all of the identified ingredients\n- Ingredients are suggestions, not requirements. Meal ideas can use some or all of the identified ingredients.`
+    : ''
+}
 
 ${isChinese ? '\n请提供正好3个具体的餐食建议（必须正好3个，不能多也不能少），每个建议必须包含：' : '\nPlease provide exactly 3 specific meal suggestions (must be exactly 3, no more, no less). Each suggestion must include:'}
-${isChinese ? 
-  '1. 餐食名称（mealName）：清晰、具体的菜名，例如"番茄鸡蛋面"、"清炒时蔬"等\n2. 描述（description）：简要说明这道菜的特点、口味、适合的场合\n3. 所需食材（ingredients）：列出制作这道菜需要的所有食材，包括用户提供的和需要额外添加的。注意：不需要使用所有用户提供的食材，可以只使用其中一部分\n4. 制作说明（preparationNotes）：简单的制作步骤或关键提示，让用户能够实际操作\n5. 其他字段按要求填写' :
-  '1. mealName: Clear, specific dish name, e.g., "Tomato Egg Noodles", "Stir-fried Vegetables"\n2. description: Brief description of the dish\'s characteristics, taste, suitable occasions\n3. ingredients: List all ingredients needed to make this dish, including those provided by the user and additional ones needed. Note: You don\'t need to use all user-provided ingredients, you can use only some of them\n4. preparationNotes: Simple preparation steps or key tips so users can actually make it\n5. Other fields as required'}
+${
+  isChinese
+    ? '1. 餐食名称（mealName）：清晰、具体的菜名，例如"番茄鸡蛋面"、"清炒时蔬"等\n2. 描述（description）：简要说明这道菜的特点、口味、适合的场合\n3. 所需食材（ingredients）：列出制作这道菜需要的所有食材，包括用户提供的和需要额外添加的。注意：不需要使用所有用户提供的食材，可以只使用其中一部分\n4. 制作说明（preparationNotes）：简单的制作步骤或关键提示，让用户能够实际操作\n5. 其他字段按要求填写'
+    : '1. mealName: Clear, specific dish name, e.g., "Tomato Egg Noodles", "Stir-fried Vegetables"\n2. description: Brief description of the dish\'s characteristics, taste, suitable occasions\n3. ingredients: List all ingredients needed to make this dish, including those provided by the user and additional ones needed. Note: You don\'t need to use all user-provided ingredients, you can use only some of them\n4. preparationNotes: Simple preparation steps or key tips so users can actually make it\n5. Other fields as required'
+}
 
-${input.energyLevel === 'low' ? (isChinese ? '\n注意：用户当前能量水平较低，请优先推荐非常简单、需要最少努力的餐食。' : '\nNote: User\'s current energy level is low, prioritize very simple meals requiring minimal effort.') : ''}
+${input.energyLevel === 'low' ? (isChinese ? '\n注意：用户当前能量水平较低，请优先推荐非常简单、需要最少努力的餐食。' : "\nNote: User's current energy level is low, prioritize very simple meals requiring minimal effort.") : ''}
 ${input.healthConditions && input.healthConditions.length > 0 ? (isChinese ? '\n注意：用户有健康考虑，请在建议中体现一般性的饮食调整（不是医疗处方）。' : '\nNote: User has health considerations, reflect general dietary adjustments in suggestions (NOT medical prescriptions).') : ''}
 
 ${isChinese ? '\n重要：这些只是餐食建议，不是医疗饮食处方。每个建议必须包含明确的免责声明。' : '\nIMPORTANT: These are meal suggestions only, NOT medical dietary prescriptions. Each suggestion must include a clear disclaimer.'}
@@ -771,7 +807,7 @@ ${isChinese ? '\n请严格按照以下JSON数组格式回复，必须返回正�
 [
   {
     "mealName": "${isChinese ? '具体菜名，例如：番茄鸡蛋面' : 'Specific dish name, e.g., Tomato Egg Noodles'}",
-    "description": "${isChinese ? '简要描述这道菜的特点和口味' : 'Brief description of the dish\'s characteristics and taste'}",
+    "description": "${isChinese ? '简要描述这道菜的特点和口味' : "Brief description of the dish's characteristics and taste"}",
     "ingredients": ["${isChinese ? '食材1' : 'ingredient 1'}", "${isChinese ? '食材2' : 'ingredient 2'}"],
     "preparationNotes": "${isChinese ? '简单的制作步骤或关键提示' : 'Simple preparation steps or key tips'}",
     "adaptedForConditions": ${input.healthConditions && input.healthConditions.length > 0 ? 'true' : 'false'},
@@ -781,7 +817,7 @@ ${isChinese ? '\n请严格按照以下JSON数组格式回复，必须返回正�
   },
   {
     "mealName": "${isChinese ? '具体菜名，例如：清炒时蔬' : 'Specific dish name, e.g., Stir-fried Vegetables'}",
-    "description": "${isChinese ? '简要描述这道菜的特点和口味' : 'Brief description of the dish\'s characteristics and taste'}",
+    "description": "${isChinese ? '简要描述这道菜的特点和口味' : "Brief description of the dish's characteristics and taste"}",
     "ingredients": ["${isChinese ? '食材1' : 'ingredient 1'}", "${isChinese ? '食材2' : 'ingredient 2'}"],
     "preparationNotes": "${isChinese ? '简单的制作步骤或关键提示' : 'Simple preparation steps or key tips'}",
     "adaptedForConditions": ${input.healthConditions && input.healthConditions.length > 0 ? 'true' : 'false'},
@@ -791,7 +827,7 @@ ${isChinese ? '\n请严格按照以下JSON数组格式回复，必须返回正�
   },
   {
     "mealName": "${isChinese ? '具体菜名，例如：第三道菜' : 'Specific dish name, e.g., Third Dish'}",
-    "description": "${isChinese ? '简要描述这道菜的特点和口味' : 'Brief description of the dish\'s characteristics and taste'}",
+    "description": "${isChinese ? '简要描述这道菜的特点和口味' : "Brief description of the dish's characteristics and taste"}",
     "ingredients": ["${isChinese ? '食材1' : 'ingredient 1'}", "${isChinese ? '食材2' : 'ingredient 2'}"],
     "preparationNotes": "${isChinese ? '简单的制作步骤或关键提示' : 'Simple preparation steps or key tips'}",
     "adaptedForConditions": ${input.healthConditions && input.healthConditions.length > 0 ? 'true' : 'false'},
@@ -801,7 +837,7 @@ ${isChinese ? '\n请严格按照以下JSON数组格式回复，必须返回正�
   }
 ]
 
-${isChinese ? '重要：必须返回有效的JSON数组格式，必须正好包含3个餐食建议，不要添加任何解释性文字。每个餐食建议都应该是实际可行的、具体的菜品。食材可以分散使用，不需要把所有食材都用在一道菜里。' : 'IMPORTANT: Must return valid JSON array format with exactly 3 meal suggestions, no explanatory text. Each meal suggestion should be practical and specific. Ingredients can be distributed across dishes, you don\'t need to use all ingredients in one dish.'}`;
+${isChinese ? '重要：必须返回有效的JSON数组格式，必须正好包含3个餐食建议，不要添加任何解释性文字。每个餐食建议都应该是实际可行的、具体的菜品。食材可以分散使用，不需要把所有食材都用在一道菜里。' : "IMPORTANT: Must return valid JSON array format with exactly 3 meal suggestions, no explanatory text. Each meal suggestion should be practical and specific. Ingredients can be distributed across dishes, you don't need to use all ingredients in one dish."}`;
 
   const response = await callLLM([
     { role: 'system', content: SAFETY_GUARDRAILS },
@@ -809,25 +845,29 @@ ${isChinese ? '重要：必须返回有效的JSON数组格式，必须正好包�
   ]);
 
   const parsed = parseLLMResponse(response);
-  
+
   // Debug logging
   if (import.meta.env.DEV) {
     console.log('Parsed LLM response for meal suggestions:', parsed);
   }
-  
-  let suggestions = Array.isArray(parsed) ? parsed : (parsed.meals || [parsed]);
-  
+
+  let suggestions = Array.isArray(parsed) ? parsed : parsed.meals || [parsed];
+
   // If parsed is a single object, wrap it in an array
   if (!Array.isArray(suggestions)) {
     suggestions = [suggestions];
   }
-  
+
   // Validate we have suggestions
   if (suggestions.length === 0) {
     console.error('No meal suggestions found in parsed response:', parsed);
-    throw new Error(isChinese ? '未能解析餐食建议，请重试。' : 'Failed to parse meal suggestions, please try again.');
+    throw new Error(
+      isChinese
+        ? '未能解析餐食建议，请重试。'
+        : 'Failed to parse meal suggestions, please try again.'
+    );
   }
-  
+
   // Log warning if we got fewer than expected
   if (suggestions.length < maxSuggestions) {
     console.warn(`Received ${suggestions.length} suggestions, expected ${maxSuggestions}`);
@@ -843,9 +883,11 @@ ${isChinese ? '重要：必须返回有效的JSON数组格式，必须正好包�
     preparationNotes: suggestion.preparationNotes,
     adaptedForConditions: suggestion.adaptedForConditions || false,
     adaptedForEnergyLevel: suggestion.adaptedForEnergyLevel || false,
-    disclaimer: suggestion.disclaimer || (isChinese ? 
-      '这是仅供一般指导的餐食建议，不能替代专业饮食建议。' :
-      'This is a meal suggestion for general guidance only and is not a substitute for professional dietary advice.'),
+    disclaimer:
+      suggestion.disclaimer ||
+      (isChinese
+        ? '这是仅供一般指导的餐食建议，不能替代专业饮食建议。'
+        : 'This is a meal suggestion for general guidance only and is not a substitute for professional dietary advice.'),
     timeAwareGuidance: suggestion.timeAwareGuidance || timeAwareGuidance || null,
     isFlexible: flexible,
   }));
@@ -854,9 +896,7 @@ ${isChinese ? '重要：必须返回有效的JSON数组格式，必须正好包�
 /**
  * Generate empathetic emotional response
  */
-export async function generateEmotionalResponse(
-  input: EmotionalInput
-): Promise<EmotionalResponse> {
+export async function generateEmotionalResponse(input: EmotionalInput): Promise<EmotionalResponse> {
   const prompt = `${SAFETY_GUARDRAILS}
 
 You are a supportive, empathetic companion helping a user process their emotions.
@@ -890,9 +930,11 @@ Respond in JSON format:
   const parsed = parseLLMResponse(response);
 
   return {
-    response: parsed.response || parsed.rawResponse || 'I hear you, and I\'m here to support you.',
+    response: parsed.response || parsed.rawResponse || "I hear you, and I'm here to support you.",
     tone: parsed.tone || 'supportive',
-    disclaimer: parsed.disclaimer || 'This is AI-generated companionship and is not a substitute for professional therapy or mental health support.',
+    disclaimer:
+      parsed.disclaimer ||
+      'This is AI-generated companionship and is not a substitute for professional therapy or mental health support.',
     suggestedResources: parsed.suggestedResources,
   };
 }
@@ -906,27 +948,39 @@ export async function analyzeFoodReflection(
 ): Promise<FoodReflectionAnalysisOutput> {
   const userLanguage = await getUserLanguage();
   const isChinese = userLanguage === 'zh';
-  
-  const languageInstruction = isChinese 
+
+  const languageInstruction = isChinese
     ? '请使用中文回复。所有内容必须使用简体中文。'
     : 'Please respond in English. All content must be in English.';
-  
-  const reflectionText = isChinese 
-    ? (input.reflection === 'light' ? '清淡' : input.reflection === 'normal' ? '正常' : '放纵')
+
+  const reflectionText = isChinese
+    ? input.reflection === 'light'
+      ? '清淡'
+      : input.reflection === 'normal'
+        ? '正常'
+        : '放纵'
     : input.reflection;
-  
-  const healthContext = input.healthConditions && input.healthConditions.length > 0
-    ? (isChinese ? `\n用户的健康条件: ${input.healthConditions.join(', ')}` : `\nUser's health conditions: ${input.healthConditions.join(', ')}`)
-    : '';
-  
-  const symptomsContext = input.recentSymptoms && input.recentSymptoms.length > 0
-    ? (isChinese ? `\n最近7天的症状: ${input.recentSymptoms.join(', ')}` : `\nRecent symptoms (last 7 days): ${input.recentSymptoms.join(', ')}`)
-    : '';
-  
+
+  const healthContext =
+    input.healthConditions && input.healthConditions.length > 0
+      ? isChinese
+        ? `\n用户的健康条件: ${input.healthConditions.join(', ')}`
+        : `\nUser's health conditions: ${input.healthConditions.join(', ')}`
+      : '';
+
+  const symptomsContext =
+    input.recentSymptoms && input.recentSymptoms.length > 0
+      ? isChinese
+        ? `\n最近7天的症状: ${input.recentSymptoms.join(', ')}`
+        : `\nRecent symptoms (last 7 days): ${input.recentSymptoms.join(', ')}`
+      : '';
+
   const notesContext = input.notes
-    ? (isChinese ? `\n用户备注: ${input.notes}` : `\nUser notes: ${input.notes}`)
+    ? isChinese
+      ? `\n用户备注: ${input.notes}`
+      : `\nUser notes: ${input.notes}`
     : '';
-  
+
   const prompt = `${SAFETY_GUARDRAILS}
 
 ${languageInstruction}
@@ -970,9 +1024,9 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
   ]);
 
   const parsed = parseLLMResponse(response);
-  
-  const defaultEncouragement = isChinese 
-    ? '感谢您记录今天的饮食！' 
+
+  const defaultEncouragement = isChinese
+    ? '感谢您记录今天的饮食！'
     : 'Thank you for recording your food today!';
   const defaultSuitability = isChinese
     ? '这个选择看起来是合理的。'
@@ -980,12 +1034,12 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
   const defaultDisclaimer = isChinese
     ? '这是仅供一般指导的建议，不是医疗建议。如有医疗问题，请咨询医疗专业人员。'
     : 'This is general guidance only, not medical advice. Please consult a healthcare professional for medical concerns.';
-  
+
   const encouragement = parsed.encouragement || defaultEncouragement;
   const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
   const suitability = parsed.suitability || defaultSuitability;
   const disclaimer = parsed.disclaimer || defaultDisclaimer;
-  
+
   return {
     encouragement,
     suggestions,
@@ -998,11 +1052,14 @@ ${isChinese ? '重要：必须返回有效的JSON格式，不要添加任何解�
  * Generate detailed preparation method and image for a meal suggestion
  * Called on-demand when user opens detail view
  */
-export async function generateMealDetail(
-  mealSuggestion: { mealName: string; description: string; ingredients: string[]; preparationNotes: string | null }
-): Promise<{
-  detailedPreparationMethod: string;  // Step-by-step numbered list
-  imageUrl: string | null;            // LLM-generated image URL (null if generation fails)
+export async function generateMealDetail(mealSuggestion: {
+  mealName: string;
+  description: string;
+  ingredients: string[];
+  preparationNotes: string | null;
+}): Promise<{
+  detailedPreparationMethod: string; // Step-by-step numbered list
+  imageUrl: string | null; // LLM-generated image URL (null if generation fails)
 }> {
   const userLanguage = await getUserLanguage();
   const isChinese = userLanguage === 'zh';
@@ -1023,31 +1080,38 @@ ${isChinese ? '请只返回编号列表，不要添加其他说明文字。' : '
 
   let detailedPreparationMethod = '';
   try {
-    const response = await callLLM([
-      { role: 'system', content: SAFETY_GUARDRAILS },
-      { role: 'user', content: preparationPrompt },
-    ], 0.7, 1000);
+    const response = await callLLM(
+      [
+        { role: 'system', content: SAFETY_GUARDRAILS },
+        { role: 'user', content: preparationPrompt },
+      ],
+      0.7,
+      1000
+    );
 
     detailedPreparationMethod = response.trim();
-    
+
     // Ensure it's in numbered list format
     if (!detailedPreparationMethod.match(/^\d+\./)) {
       // If response doesn't start with number, try to format it
       const lines = detailedPreparationMethod.split('\n').filter(line => line.trim());
-      detailedPreparationMethod = lines.map((line, index) => {
-        const trimmed = line.trim();
-        // If line already starts with number, keep it
-        if (trimmed.match(/^\d+\./)) {
-          return trimmed;
-        }
-        // Otherwise, add number
-        return `${index + 1}. ${trimmed}`;
-      }).join('\n');
+      detailedPreparationMethod = lines
+        .map((line, index) => {
+          const trimmed = line.trim();
+          // If line already starts with number, keep it
+          if (trimmed.match(/^\d+\./)) {
+            return trimmed;
+          }
+          // Otherwise, add number
+          return `${index + 1}. ${trimmed}`;
+        })
+        .join('\n');
     }
   } catch (error: any) {
     console.error('Failed to generate detailed preparation method:', error);
     // Fallback to basic preparation notes if available
-    detailedPreparationMethod = mealSuggestion.preparationNotes || 
+    detailedPreparationMethod =
+      mealSuggestion.preparationNotes ||
       (isChinese ? '制作方法暂不可用' : 'Preparation method unavailable');
   }
 
@@ -1057,20 +1121,19 @@ ${isChinese ? '请只返回编号列表，不要添加其他说明文字。' : '
     // Note: Image generation API endpoint needs to be configured
     // For now, we'll attempt to call an image generation endpoint
     // The exact endpoint format depends on the image generation service available
-    
+
     // Using Gemini's image generation capability if available
     // This is a placeholder - actual implementation depends on available API
     const imagePrompt = `${mealSuggestion.mealName}: ${mealSuggestion.description}`;
-    
+
     // Attempt to generate image via API
     // If image generation API is not available, imageUrl will remain null
     // and UI will show a placeholder
-    
+
     // TODO: Implement actual image generation API call
     // For now, return null to indicate image generation is not yet implemented
     // This allows the feature to work without images while image generation is being set up
     imageUrl = null;
-    
   } catch (error: any) {
     console.error('Failed to generate image:', error);
     // Image generation failure is not critical - continue without image
@@ -1082,4 +1145,3 @@ ${isChinese ? '请只返回编号列表，不要添加其他说明文字。' : '
     imageUrl,
   };
 }
-
