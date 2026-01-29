@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+.vite/
+
+# Environment files (should be passed as env vars, not copied)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation and specs (not needed in container)
+README.md
+*.md
+specs/
+.cursor/
+.specify/
+
+# Frontend source (backend doesn't need this)
+src/
+public/
+index.html
+vite.config.ts
+tsconfig.json
+tailwind.config.js
+postcss.config.js
+
+# Frontend build artifacts
+dist/
+
+# Test files
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Only include what backend needs:
+# - server/proxy-server.js
+# - package.json
+# - package-lock.json (if exists)
