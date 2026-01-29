@@ -3,26 +3,17 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files and source
 COPY package.json ./
-
-# Install production dependencies only
-RUN npm install --omit=dev && npm cache clean --force
-
-# Copy source files
 COPY src/ ./src/
 
-# Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nodejs && \
-    chown -R nodejs:nodejs /app
+# Install production dependencies
+RUN npm install --omit=dev
 
-USER nodejs
+# Set environment
+ENV NODE_ENV=production
+ENV PORT=8080
 
-# Default port (can be overridden via PORT env var)
 EXPOSE 8080
 
-ENV NODE_ENV=production
-
-# Start the server
 CMD ["node", "src/proxy-server.js"]
