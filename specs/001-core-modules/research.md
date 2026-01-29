@@ -60,7 +60,7 @@
 **API Configuration**:
 - **Model Name**: `vibe-coding-app-gemini`
 - **Base URL**: `https://hyperecho-proxy.aelf.dev/v1`
-- **API Key**: `hy-iAce_nUcM7-gHGJY2ZJvdqa2H6nVpDZfLoZT4HndpLk` (store in environment variables, never commit)
+- **API Key**: Set in `.env` file as `VITE_LLM_API_KEY` (store in environment variables, never commit to git)
 - **API Format**: OpenAI-compatible API (uses `/v1/chat/completions` endpoint)
 
 **Rationale**:

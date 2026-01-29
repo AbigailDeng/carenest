@@ -18,12 +18,14 @@ AI-powered personal health companion app for tracking health, nutrition, and emo
 
 2. **Configure environment variables:**
    
-   Create a `.env` file in the root directory:
+   Create a `.env` file in the root directory (see `.env.example` for template):
    ```bash
    VITE_LLM_BASE_URL=https://hyperecho-proxy.aelf.dev/v1
-   VITE_LLM_API_KEY=hy-iAce_nUcM7-gHGJY2ZJvdqa2H6nVpDZfLoZT4HndpLk
+   VITE_LLM_API_KEY=your-api-key-here
    VITE_LLM_MODEL=vibe-coding-app-gemini
    ```
+   
+   **Important**: Never commit your `.env` file to git. It contains sensitive API keys.
 
 3. **Start development server:**
    ```bash

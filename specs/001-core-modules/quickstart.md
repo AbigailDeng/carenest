@@ -192,15 +192,18 @@ export const saveEntity = async <T>(
 
 ### 5. Configure LLM Service
 
-Create `.env` file in project root:
+Create `.env` file in project root (copy from `.env.example`):
 
 ```bash
 VITE_LLM_BASE_URL=https://hyperecho-proxy.aelf.dev/v1
-VITE_LLM_API_KEY=hy-iAce_nUcM7-gHGJY2ZJvdqa2H6nVpDZfLoZT4HndpLk
+VITE_LLM_API_KEY=your-api-key-here
 VITE_LLM_MODEL=vibe-coding-app-gemini
 ```
 
-**Important**: Add `.env` to `.gitignore` to prevent committing API keys.
+**Important**: 
+- Add `.env` to `.gitignore` to prevent committing API keys (already configured)
+- Never commit your `.env` file with real API keys
+- Use `.env.example` as a template for other developers
 
 Create `src/services/llmService.ts`:
 
