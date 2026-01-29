@@ -8,7 +8,7 @@
     "dev:vite": "vite",
     "dev:proxy": "node server/proxy-server.js",
     "dev:vercel": "vercel dev",
-    "build": "vite build",
+    "build": "npx vite build",
     "build:check": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
