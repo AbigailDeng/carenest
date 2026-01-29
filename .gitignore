@@ -86,3 +86,7 @@ ehthumbs.db
 Desktop.ini
 
 
+
+# Chrono CLI
+.chrono/
+.cursor/skills/
