@@ -10,12 +10,13 @@ COPY backend/package*.json ./
 # Install production dependencies only
 RUN npm install --omit=dev
 
-# Copy source files from backend folder
-COPY backend/src/ ./src/
+# Copy entire backend directory
+COPY backend/ ./
 
 # Set environment
 ENV NODE_ENV=production
 
 EXPOSE 8080
 
+# backend/package.json has: "start": "node src/proxy-server.js"
 CMD ["npm", "start"]
