@@ -6,6 +6,7 @@ import {
   generateEmotionalResponse,
   analyzeFoodReflection,
   generateMealDetail,
+  generateCompanionDialogue,
 } from '../services/llmService.js';
 
 const router = Router();
@@ -109,6 +110,34 @@ router.post('/meal-detail', asyncHandler(async (req, res) => {
     { mealName, description, ingredients, preparationNotes },
     language || 'en'
   );
+  res.json(result);
+}));
+
+// POST /api/companion-dialogue
+router.post('/companion-dialogue', asyncHandler(async (req, res) => {
+  const {
+    userMessage,
+    characterState,
+    conversationHistory,
+    language,
+    characterName,
+    triggerType,
+    userEmotionalState,
+    integrationHint,
+    timeOfDay,
+  } = req.body;
+
+  const result = await generateCompanionDialogue({
+    userMessage,
+    characterState,
+    conversationHistory,
+    language: language || 'en',
+    characterName: characterName || 'Companion',
+    triggerType,
+    userEmotionalState,
+    integrationHint,
+    timeOfDay,
+  });
   res.json(result);
 }));
 

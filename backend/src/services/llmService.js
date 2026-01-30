@@ -431,3 +431,99 @@ ${isChinese ? '请提供编号列表格式的详细步骤：' : 'Provide numbere
     imageUrl: null,
   };
 }
+
+// Companion dialogue safety guardrails
+const COMPANION_SAFETY_GUARDRAILS = `
+IMPORTANT SAFETY GUIDELINES:
+- You are a supportive companion character, NOT a medical professional
+- Do NOT provide medical diagnoses, prescriptions, or treatment recommendations
+- Maintain a supportive, empathetic, non-judgmental tone
+- All suggestions are emotional support and gentle guidance only
+- If you detect any crisis indicators, provide supportive resources
+`;
+
+/**
+ * Generate companion dialogue
+ */
+export async function generateCompanionDialogue(input) {
+  const {
+    userMessage,
+    characterState,
+    conversationHistory,
+    language,
+    characterName,
+    triggerType,
+    userEmotionalState,
+    integrationHint,
+    timeOfDay,
+  } = input;
+
+  const isChinese = language === 'zh';
+  
+  // Build conversation context
+  let conversationContext = '';
+  if (conversationHistory && conversationHistory.length > 0) {
+    const recentMessages = conversationHistory
+      .slice(-5)
+      .map(msg => `${msg.role === 'assistant' ? characterName : 'User'}: ${msg.content}`)
+      .join('\n');
+    conversationContext = `\nRecent Conversation:\n${recentMessages}`;
+  }
+
+  // Build character state context
+  const stateContext = `
+Character State:
+- Mood: ${characterState?.mood || 'neutral'}
+- Closeness: ${characterState?.closeness || 50}/100 (${characterState?.relationshipStage || 'acquaintance'} stage)
+- Energy: ${characterState?.energy || 'medium'}
+- Time of day: ${timeOfDay || 'afternoon'}
+`;
+
+  // Build current context
+  let currentContext = '';
+  if (userMessage) {
+    currentContext = `\nUser's Current Message: "${userMessage}"`;
+  }
+
+  // Emotional state context
+  let emotionalContext = '';
+  if (userEmotionalState) {
+    emotionalContext = `\nUser's Emotional State: ${userEmotionalState}`;
+  }
+
+  // Integration hint context
+  let integrationContext = '';
+  if (integrationHint) {
+    integrationContext = `\nGentle Guidance: You may gently suggest the user access the ${integrationHint} module, but frame it as "doing together" rather than a task.`;
+  }
+
+  const prompt = `You are ${characterName}, a caring AI boyfriend companion character in a health and wellness app. You speak in a warm, conversational, first-person tone as a caring partner.
+
+${stateContext}${conversationContext}${currentContext}${emotionalContext}${integrationContext}
+
+CRITICAL TONE REQUIREMENTS:
+- Use first-person conversational language: "我看到...", "听我的...", "我们一起..." / "I see...", "Listen to me...", "Let's..."
+- Speak like a caring boyfriend partner, not a clinical manual
+- Keep response concise (1-3 sentences)
+- ${userEmotionalState === 'sad' || userEmotionalState === 'stressed' ? 'Be especially warm and understanding' : ''}
+
+${isChinese ? '请用中文回复。' : 'Please respond in English.'}
+
+Generate a supportive response:`;
+
+  try {
+    const response = await callLLM([
+      { role: 'system', content: COMPANION_SAFETY_GUARDRAILS },
+      { role: 'user', content: prompt },
+    ], 0.8, 150);
+
+    return { response };
+  } catch (error) {
+    console.error('Companion dialogue LLM error:', error);
+    // Return a default response
+    const defaultResponse = isChinese 
+      ? '你好！今天怎么样？我在这里陪着你。'
+      : "Hello! How are you today? I'm here with you.";
+    return { response: defaultResponse };
+  }
+}
