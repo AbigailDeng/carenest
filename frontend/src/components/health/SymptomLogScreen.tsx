@@ -36,13 +36,12 @@ export default function SymptomLogScreen() {
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [loadingEntry, setLoadingEntry] = useState(false);
-  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false); // Emotional save confirmation - FR-037(8)
   const [placeholderIndex, setPlaceholderIndex] = useState(0); // Dynamic placeholder rotation - FR-037(3)
 
-  // Background image URL - Bai Qi illustration
+  // Background image URL - character illustration
   const BACKGROUND_URL = '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
 
-  // Premium glassmorphism constants - FR-037(2) "Baiqi's Private Consultation Room"
+  // Premium glassmorphism constants - FR-037(2) "Private Consultation Room"
   const GLASS_BG = 'rgba(255, 255, 255, 0.15)'; // Premium transparency, no gray
   const GLASS_BLUR = 'blur(35px)'; // Enhanced blur for premium effect
   const GLASS_BORDER = '1.5px solid rgba(255, 255, 255, 0.4)'; // White glowing border
@@ -238,11 +237,8 @@ export default function SymptomLogScreen() {
           }
         }
         
-        // Show emotional save confirmation - FR-037(8)
-        setShowSaveConfirmation(true);
-        setTimeout(() => {
-          navigate(`/health/symptoms/${entryId}`);
-        }, 2000);
+        // Navigate directly to symptom detail page after save
+        navigate(`/health/symptoms/${entryId}`);
       } else {
         const entry = {
           symptoms: symptoms.trim(),
@@ -295,11 +291,8 @@ export default function SymptomLogScreen() {
           }
         }
         
-        // Show emotional save confirmation - FR-037(8)
-        setShowSaveConfirmation(true);
-        setTimeout(() => {
-          navigate(`/health/symptoms/${savedEntry.id}`);
-        }, 2000);
+        // Navigate directly to symptom detail page after save
+        navigate(`/health/symptoms/${savedEntry.id}`);
       }
     } catch (err: any) {
       setError(err.message || t('health.failedToSave'));
@@ -310,7 +303,7 @@ export default function SymptomLogScreen() {
   if (loadingEntry) {
     return (
       <div className="relative min-h-screen" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
-        {/* ImageBackground - 最底层唯一的白起立绘 */}
+        {/* ImageBackground - 最底层唯一的角色立绘 */}
         <ImageBackground imageUrl={BACKGROUND_URL} />
         <div className="relative flex items-center justify-center z-10" style={{ minHeight: '100vh' }}>
           <div className="text-center">
@@ -323,7 +316,7 @@ export default function SymptomLogScreen() {
 
   return (
     <div className="relative min-h-screen overflow-hidden" style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0, background: 'transparent' }}>
-      {/* ImageBackground - 最底层唯一的白起立绘 */}
+      {/* ImageBackground - 最底层唯一的角色立绘 */}
       <ImageBackground imageUrl={BACKGROUND_URL} />
 
       {/* Minimal premium glassmorphism back button - FR-037(5) */}
@@ -344,26 +337,28 @@ export default function SymptomLogScreen() {
           <ChevronLeft size={24} strokeWidth={2} />
       </button>
 
-      {/* Character dialogue bubble - positioned at Bai Qi's shoulder level with avatar icon, left-aligned to avoid overlapping input area - FR-037(7) */}
+      {/* Character dialogue bubble - positioned at character's shoulder level with avatar icon, left-aligned to avoid overlapping input area - FR-037(7) */}
       {/* When AI analysis completes, this bubble REPLACES the initial prompt with AI conclusion */}
       {/* CRITICAL: Position must ensure NO overlap with input area below */}
       <div className="fixed left-0 right-0 z-40 flex justify-start w-full" style={{
         paddingLeft: '20px',
         paddingRight: '20px', 
-          top: aiAnalysis ? '60px' : '80px', // Move higher when AI conclusion is shown (longer content)
-          pointerEvents: 'none',
-          maxHeight: aiAnalysis ? 'calc(100vh - 400px)' : 'auto', // Limit height to prevent overlap
+          top: aiAnalysis ? '80px' : '80px', // Fixed position to prevent overlap with input area
+          pointerEvents: aiAnalysis ? 'auto' : 'none', // Enable pointer events when AI analysis is shown for scrolling
         }}>
           <div
-            className="flex items-start gap-2 px-3 py-2 rounded-2xl"
+            className="flex items-start gap-2 rounded-2xl"
             style={{
               background: GLASS_BG,
               backdropFilter: GLASS_BLUR,
               border: GLASS_BORDER,
               boxShadow: GLASS_SHADOW,
               maxWidth: aiAnalysis ? '85%' : 'max-w-xs', // Allow wider bubble for AI conclusion
-              maxHeight: aiAnalysis ? '200px' : 'auto', // Limit max height for AI conclusion
-              overflowY: aiAnalysis ? 'auto' : 'visible', // Allow scrolling if content is too long
+              height: aiAnalysis ? '180px' : 'auto', // Fixed height for AI conclusion to prevent blocking other areas
+              maxHeight: aiAnalysis ? '180px' : 'auto', // Fixed max height - 180px as requested
+              overflow: 'hidden', // Hide overflow on outer container
+              padding: aiAnalysis ? '12px' : '8px 12px', // Adjust padding for scrollable content
+              pointerEvents: 'auto', // Ensure the bubble itself can receive touch events for scrolling
             }}
           >
             <CharacterAvatar
@@ -372,16 +367,27 @@ export default function SymptomLogScreen() {
               size="sm"
               showBadge={false}
             />
-            <div className="flex-1">
+            <div className="flex-1 min-w-0" style={{ 
+              height: aiAnalysis ? '100%' : 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden', // Hide overflow on flex container
+            }}>
               {aiAnalysis && !analyzing ? (
-                // AI conclusion replaces initial prompt - FR-037(7)
-                <div>
+                // AI conclusion replaces initial prompt - FR-037(7) - Scrollable content area
+                <div style={{ 
+                  flex: 1,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+                  paddingRight: '4px', // Add padding for scrollbar
+                }}>
                   <p className="text-sm font-medium mb-2 leading-relaxed" style={{ color: '#5A4E4E', textShadow: '0 1px 2px rgba(255,255,255,0.6)' }}>
                     {aiAnalysis.observations}
                   </p>
                   {aiAnalysis.suggestions && aiAnalysis.suggestions.length > 0 && (
                     <ul className="text-xs space-y-1 font-medium" style={{ color: '#5A4E4E', opacity: 0.9, textShadow: '0 1px 2px rgba(255,255,255,0.6)' }}>
-                      {aiAnalysis.suggestions.slice(0, 3).map((suggestion: string, index: number) => (
+                      {aiAnalysis.suggestions.map((suggestion: string, index: number) => (
                         <li key={index} className="flex items-start gap-1 leading-relaxed">
                           <span>·</span>
                           <span>{suggestion}</span>
@@ -418,7 +424,7 @@ export default function SymptomLogScreen() {
                   border: GLASS_BORDER,
                   boxShadow: GLASS_SHADOW,
                   borderRadius: '16px',
-                  animation: 'floatCard1 3.5s ease-in-out infinite',
+                  // No floating animation - only character illustration should float
                 }}
               >
                 <label 
@@ -504,8 +510,7 @@ export default function SymptomLogScreen() {
                     border: GLASS_BORDER,
                     boxShadow: GLASS_SHADOW,
                     borderRadius: '16px',
-                    animation: 'floatCard2 3.8s ease-in-out infinite',
-                    animationDelay: '0.4s',
+                    // No floating animation - only character illustration should float
                     marginTop: '16px', // Clear visual separation from textarea container
                   }}
                 >
@@ -579,24 +584,6 @@ export default function SymptomLogScreen() {
                       {t('health.symptoms.analyzing')}
                     </p>
                   </div>
-                </div>
-              )}
-
-              {/* Emotional save confirmation - FR-037(8) */}
-              {showSaveConfirmation && (
-                <div
-                  className="p-4 rounded-2xl"
-                  style={{
-                    background: GLASS_BG,
-                    backdropFilter: GLASS_BLUR,
-                    border: GLASS_BORDER,
-                    boxShadow: GLASS_SHADOW,
-                    borderRadius: '16px',
-                  }}
-                >
-                  <p className="text-sm font-bold text-center" style={{ color: '#5A4E4E', textShadow: '0 1px 2px rgba(255,255,255,0.6)' }}>
-                    {t('health.symptoms.rememberedInHeart')}
-                  </p>
                 </div>
               )}
 
@@ -719,40 +706,9 @@ export default function SymptomLogScreen() {
           </div>
         </div>
 
-        {/* CSS for floating animations, breathing glow, and placeholder styling - FR-037(9), FR-037(6), FR-037(2) */}
+        {/* CSS for placeholder styling - FR-037(2) */}
+        {/* Note: Floating animations removed - only character illustration (立绘图) should have floating effect */}
         <style>{`
-          @keyframes floatCard1 {
-            0%, 100% {
-              transform: translateY(0px);
-            }
-            50% {
-              transform: translateY(-4px);
-            }
-          }
-          @keyframes floatCard2 {
-            0%, 100% {
-              transform: translateY(0px);
-            }
-            50% {
-              transform: translateY(-5px);
-            }
-          }
-          @keyframes floatCard3 {
-            0%, 100% {
-              transform: translateY(0px);
-            }
-            50% {
-              transform: translateY(-3px);
-            }
-          }
-          @keyframes breathingGlow {
-            0%, 100% {
-              box-shadow: 0 0 20px rgba(255, 126, 157, 0.4), 0 4px 12px rgba(255, 126, 157, 0.2);
-            }
-            50% {
-              box-shadow: 0 0 30px rgba(255, 126, 157, 0.6), 0 4px 16px rgba(255, 126, 157, 0.4);
-            }
-          }
           textarea::placeholder {
             color: #5A4E4E;
             opacity: 0.7;

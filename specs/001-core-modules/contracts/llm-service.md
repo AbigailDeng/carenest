@@ -11,7 +11,7 @@
 
 **Environment Variables**:
 - `VITE_LLM_BASE_URL`: `https://hyperecho-proxy.aelf.dev/v1`
-- `VITE_LLM_API_KEY`: `hy-iAce_nUcM7-gHGJY2ZJvdqa2H6nVpDZfLoZT4HndpLk` (never commit to git)
+- `VITE_LLM_API_KEY`: Set in `.env` file (never commit to git, see `.env.example` for template)
 - `VITE_LLM_MODEL`: `vibe-coding-app-gemini`
 
 **API Request Format**:

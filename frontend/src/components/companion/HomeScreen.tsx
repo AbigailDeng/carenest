@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Leaf, Heart } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useCompanion } from '../../hooks/useCompanion';
 import { useConversation } from '../../hooks/useConversation';
@@ -8,9 +7,6 @@ import { generateCompanionDialogue, getTimeOfDay } from '../../services/companio
 import { ConversationMessage } from '../../types';
 import FloatingParticles from './FloatingParticles';
 import FunctionSpheres from './FunctionSpheres';
-import RadialMenu from './RadialMenu';
-import IconExpansionTransition from './IconExpansionTransition';
-import FullScreenChartPanel from './FullScreenChartPanel';
 import ImageBackground from '../shared/ImageBackground';
 
 const CHARACTER_ID = 'baiqi';
@@ -30,16 +26,16 @@ export default function HomeScreen() {
 
   const [userInput, setUserInput] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [expandingIcon, setExpandingIcon] = useState<{
-    module: 'health' | 'nutrition' | 'emotion';
-    position: { x: number; y: number; width: number; height: number };
-    element: React.ReactNode;
-  } | null>(null);
-  const [radialMenuOpen, setRadialMenuOpen] = useState(false);
-  const [radialMenuClickPosition, setRadialMenuClickPosition] = useState<{ x: number; y: number } | null>(null);
 
   const hasInitialized = useRef(false);
   const greetingGenerated = useRef(false);
+
+  // Check if this is user's first visit to home page
+  const FIRST_VISIT_KEY = 'companion_first_visit_completed';
+  const isFirstVisit = () => {
+    const firstVisitCompleted = localStorage.getItem(FIRST_VISIT_KEY);
+    return firstVisitCompleted !== 'true';
+  };
 
   // Initialize character on mount (only once)
   useEffect(() => {
@@ -53,8 +49,13 @@ export default function HomeScreen() {
     init();
   }, [initializeCharacter, updateEnergyByTimeOfDay]);
 
-  // Generate initial greeting (only once when characterState is ready)
+  // Generate initial greeting ONLY on first visit
   useEffect(() => {
+    // Only generate greeting on first visit
+    if (!isFirstVisit()) {
+      return;
+    }
+
     if (characterLoading || greetingGenerated.current || !characterState || messages.length > 0) {
       return;
     }
@@ -122,6 +123,9 @@ export default function HomeScreen() {
           await updateMood(dialogue.suggestedMood);
         }
         await incrementCloseness(1);
+        
+        // Mark first visit as completed
+        localStorage.setItem(FIRST_VISIT_KEY, 'true');
       } catch (err) {
         console.warn('Failed to generate greeting, using template fallback:', err);
         const { getCharacterConfig } = await import('../../config/characters');
@@ -156,6 +160,8 @@ export default function HomeScreen() {
             },
           };
           await addMessage(fallbackMessage);
+          // Mark first visit as completed even with fallback
+          localStorage.setItem(FIRST_VISIT_KEY, 'true');
         }
       } finally {
         setGenerating(false);
@@ -204,105 +210,9 @@ export default function HomeScreen() {
       await addMessage(userMessage);
       setUserInput('');
 
-      // Generate character response
-      const recentMessages = await getRecent(10);
-
-      // Detect emotional state
-      let userEmotionalState: 'sad' | 'stressed' | 'lonely' | 'happy' | 'neutral' | undefined;
-      const lowerInput = trimmedInput.toLowerCase();
-      if (
-        lowerInput.includes('sad') ||
-        lowerInput.includes('unhappy') ||
-        lowerInput.includes('depressed')
-      ) {
-        userEmotionalState = 'sad';
-      } else if (
-        lowerInput.includes('stress') ||
-        lowerInput.includes('worried') ||
-        lowerInput.includes('anxious')
-      ) {
-        userEmotionalState = 'stressed';
-      } else if (lowerInput.includes('lonely') || lowerInput.includes('alone')) {
-        userEmotionalState = 'lonely';
-      } else if (
-        lowerInput.includes('happy') ||
-        lowerInput.includes('glad') ||
-        lowerInput.includes('great')
-      ) {
-        userEmotionalState = 'happy';
-      }
-
-      let dialogue;
-      try {
-        dialogue = await generateCompanionDialogue({
-          characterId: CHARACTER_ID,
-          userMessage: trimmedInput,
-          characterState,
-          conversationHistory: recentMessages,
-          triggerType: 'user_initiated',
-          userEmotionalState,
-        });
-      } catch (err) {
-        console.warn('LLM generation failed, using template fallback:', err);
-        const { selectDialogueTemplate } = await import('../../services/companionService');
-        const templateContent = selectDialogueTemplate({
-          characterId: CHARACTER_ID,
-          characterState,
-          conversationHistory: recentMessages,
-          triggerType: 'user_initiated',
-          userEmotionalState,
-        });
-        dialogue = {
-          content: templateContent,
-          messageType: 'text' as const,
-          metadata: {
-            aiGenerated: false,
-            templateId: 'fallback',
-            processingTime: 0,
-          },
-        };
-      }
-
-      const responseNow = new Date().toISOString();
-      const characterMessage: ConversationMessage = {
-        id: crypto.randomUUID(),
-        timestamp: responseNow,
-        createdAt: responseNow,
-        updatedAt: responseNow,
-        characterId: CHARACTER_ID,
-        sender: 'character',
-        content: dialogue.content,
-        messageType: dialogue.messageType,
-        choices: dialogue.choices,
-        characterImageUrl: dialogue.characterImageUrl,
-        context: {
-          mood: characterState.mood,
-          closeness: characterState.closeness,
-          energy: characterState.energy,
-          timeOfDay,
-          relationshipStage: characterState.relationshipStage,
-        },
-        metadata: {
-          isProactive: false,
-          triggerType: 'user_initiated',
-          aiGenerated: dialogue.metadata.aiGenerated,
-          templateId: dialogue.metadata.templateId,
-        },
-      };
-
-      await addMessage(characterMessage);
-
-      // Update character state
-      if (dialogue.suggestedMood) {
-        await updateMood(dialogue.suggestedMood);
-      }
-      await incrementCloseness(1);
-
-      if (userEmotionalState === 'sad' || userEmotionalState === 'stressed') {
-        await updateMood('concerned');
-      } else if (userEmotionalState === 'happy') {
-        await updateMood('happy');
-      }
+      // FR-042: Immediately navigate to /emotional route when user sends message
+      // The /emotional page will handle displaying the message and generating the response
+      navigate('/emotional');
     } catch (err: any) {
       console.error('Error sending message:', err);
     } finally {
@@ -325,20 +235,24 @@ export default function HomeScreen() {
     }
   };
 
-  // Handle panel close
-  const handlePanelClose = () => {
-    setExpandingIcon(null);
-  };
 
-  // Background image URL - use specified character illustration (白起立绘)
-  const backgroundImageUrl = '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
+  // Background image URL - use specified character illustration (角色立绘)
+  const backgroundImageUrl = '/images/DM_20260123234921_001.jpg';
 
   return (
     <div
       className="relative min-h-screen flex flex-col overflow-hidden"
-      style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0, background: 'transparent' }}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        minHeight: '100vh',
+        margin: 0,
+        padding: 0,
+        background: 'transparent',
+      }}
     >
-      {/* ImageBackground - 最底层唯一的白起立绘 */}
+      {/* ImageBackground - 最底层唯一的角色立绘 - 纯装饰，无交互 */}
       <ImageBackground imageUrl={backgroundImageUrl} />
 
       {/* Minimal transparent title (replaces ugly white bar) */}
@@ -355,232 +269,147 @@ export default function HomeScreen() {
         {t('app.title') || 'Wellmate'}
       </div>
 
-      {/* Radial menu click area - Full-screen with floating animation */}
-      <div
-        className="fixed inset-0"
-        style={{
-          zIndex: 3,
-          pointerEvents: 'auto', // Enable clicks for radial menu
-        }}
-        onClick={(e) => {
-          // Only trigger radial menu if clicking character center/chest area (not conversation area)
-          const rect = e.currentTarget.getBoundingClientRect();
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
-          const clickX = e.clientX;
-          const clickY = e.clientY;
-          
-          // Check if click is in center 40% area (chest region)
-          const centerRegionWidth = rect.width * 0.4;
-          const centerRegionHeight = rect.height * 0.4;
-          const isInCenterRegion =
-            Math.abs(clickX - centerX) < centerRegionWidth / 2 &&
-            Math.abs(clickY - centerY) < centerRegionHeight / 2;
-          
-          if (isInCenterRegion && !radialMenuOpen) {
-            setRadialMenuClickPosition({ x: clickX, y: clickY });
-            setRadialMenuOpen(true);
-          }
-        }}
-      />
-
       {/* Floating Particles */}
       <div className="absolute inset-0" style={{ zIndex: 2 }}>
         <FloatingParticles count={20} />
       </div>
 
-        {/* Function Spheres - Top Right */}
-        <FunctionSpheres
-          onHealthClick={() => handleFunctionClick('health')}
-          onNutritionClick={() => handleFunctionClick('nutrition')}
-          onEmotionClick={() => handleFunctionClick('emotion')}
-        />
+      {/* Function Spheres - Top Right */}
+      <FunctionSpheres
+        onHealthClick={() => handleFunctionClick('health')}
+        onNutritionClick={() => handleFunctionClick('nutrition')}
+        onEmotionClick={() => handleFunctionClick('emotion')}
+      />
 
-        {/* Single latest dialogue bubble (focus on Baiqi face) */}
+      {/* Single latest dialogue bubble (focus on character face) */}
+      <div
+        className="fixed left-0 right-0 z-20 flex justify-center px-4"
+        style={{
+          bottom: 'calc(env(safe-area-inset-bottom) + 92px)', // above input capsule
+          pointerEvents: 'none',
+        }}
+      >
         <div
-          className="fixed left-0 right-0 z-20 flex justify-center px-4"
+          className="w-full max-w-[92%] px-6 py-5"
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom) + 92px)', // above input capsule
-            pointerEvents: 'none',
+            background: 'rgba(255, 255, 255, 0.4)',
+            backdropFilter: 'blur(30px)',
+            borderRadius: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.55)',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(255, 209, 220, 0.18)',
+            color: '#4A4A4A',
+            fontFamily: "'Montserrat', 'PingFang SC', 'PingFang Light', sans-serif",
+            fontWeight: 300,
+            pointerEvents: 'auto',
           }}
         >
-          <div
-            className="w-full max-w-[92%] px-6 py-5"
+          <p className="text-[15px] leading-relaxed" style={{ color: '#4A4A4A' }}>
+            {latestCharacterMessage?.content ||
+              (characterLoading ? '' : t('companion.noMessages') || '...')}
+          </p>
+          {generating && (
+            <div className="mt-3 flex items-center gap-2 opacity-70">
+              <div
+                className="w-2 h-2 rounded-full animate-bounce"
+                style={{ background: '#FFD1DC' }}
+              />
+              <div
+                className="w-2 h-2 rounded-full animate-bounce"
+                style={{ background: '#FFD1DC', animationDelay: '0.2s' }}
+              />
+              <div
+                className="w-2 h-2 rounded-full animate-bounce"
+                style={{ background: '#FFD1DC', animationDelay: '0.4s' }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom input capsule (90% width, 60px height, minimal glass) */}
+      <div
+        className="fixed left-0 right-0 z-30 safe-area-bottom flex justify-center pb-4"
+        style={{ bottom: 0 }}
+      >
+        <div
+          className="flex items-center gap-3 px-3"
+          style={{
+            width: '90vw',
+            height: '60px',
+            background: 'rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(30px)',
+            border: '1px solid rgba(255, 255, 255, 0.35)',
+            borderRadius: '9999px',
+            boxShadow: '0 12px 44px rgba(0,0,0,0.16)',
+          }}
+        >
+          <input
+            type="text"
+            value={userInput}
+            onChange={e => setUserInput(e.target.value)}
+            onKeyPress={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            placeholder={t('companion.typeMessage') || '输入消息...'}
+            disabled={generating || !characterState}
+            className="flex-1 px-4 h-[46px] rounded-full focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed font-light text-base"
             style={{
-              background: 'rgba(255, 255, 255, 0.4)',
-              backdropFilter: 'blur(30px)',
-              borderRadius: '24px',
-              border: '1px solid rgba(255, 255, 255, 0.55)',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(255, 209, 220, 0.18)',
+              background: 'rgba(255, 255, 255, 0.35)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.45)',
               color: '#4A4A4A',
               fontFamily: "'Montserrat', 'PingFang SC', 'PingFang Light', sans-serif",
               fontWeight: 300,
-              pointerEvents: 'auto',
             }}
-          >
-            <p className="text-[15px] leading-relaxed" style={{ color: '#4A4A4A' }}>
-              {latestCharacterMessage?.content ||
-                (characterLoading ? '' : t('companion.noMessages') || '...')}
-            </p>
-            {generating && (
-              <div className="mt-3 flex items-center gap-2 opacity-70">
-                <div
-                  className="w-2 h-2 rounded-full animate-bounce"
-                  style={{ background: '#FFD1DC' }}
-                />
-                <div
-                  className="w-2 h-2 rounded-full animate-bounce"
-                  style={{ background: '#FFD1DC', animationDelay: '0.2s' }}
-                />
-                <div
-                  className="w-2 h-2 rounded-full animate-bounce"
-                  style={{ background: '#FFD1DC', animationDelay: '0.4s' }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom input capsule (90% width, 60px height, minimal glass) */}
-        <div
-          className="fixed left-0 right-0 z-30 safe-area-bottom flex justify-center pb-4"
-          style={{ bottom: 0 }}
-        >
-          <div
-            className="flex items-center gap-3 px-3"
-            style={{
-              width: '90vw',
-              height: '60px',
-              background: 'rgba(255, 255, 255, 0.2)',
-              backdropFilter: 'blur(30px)',
-              border: '1px solid rgba(255, 255, 255, 0.35)',
-              borderRadius: '9999px',
-              boxShadow: '0 12px 44px rgba(0,0,0,0.16)',
-            }}
-          >
-            <input
-              type="text"
-              value={userInput}
-              onChange={e => setUserInput(e.target.value)}
-              onKeyPress={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              placeholder={t('companion.typeMessage') || '输入消息...'}
-              disabled={generating || !characterState}
-              className="flex-1 px-4 h-[46px] rounded-full focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed font-light text-base"
-              style={{
-                background: 'rgba(255, 255, 255, 0.35)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.45)',
-                color: '#4A4A4A',
-                fontFamily: "'Montserrat', 'PingFang SC', 'PingFang Light', sans-serif",
-                fontWeight: 300,
-              }}
-            />
-            <button
-              onClick={handleSendMessage}
-              disabled={!userInput.trim() || generating || !characterState}
-              className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 touch-target disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background:
-                  !userInput.trim() || generating || !characterState
-                    ? 'rgba(255, 255, 255, 0.3)'
-                    : '#FFD1DC',
-                color: '#4A4A4A',
-                boxShadow:
-                  !userInput.trim() || generating || !characterState
-                    ? 'none'
-                    : '0 2px 8px rgba(255, 209, 220, 0.4)',
-              }}
-              onMouseDown={e => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.opacity = '0.8';
-                  e.currentTarget.style.transform = 'scale(0.95)';
-                }
-              }}
-              onMouseUp={e => {
-                e.currentTarget.style.opacity = '1';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.opacity = '1';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Radial Menu - FR-031D */}
-        <RadialMenu
-          isOpen={radialMenuOpen}
-          onClose={() => {
-            setRadialMenuOpen(false);
-            setRadialMenuClickPosition(null);
-          }}
-          onIconClick={(module) => {
-            if (module === 'settings') {
-              // Handle settings separately if needed
-              return;
-            }
-            
-            // Get icon element and position for expansion transition
-            const iconElement = (
-              <div className="w-16 h-16 rounded-full flex items-center justify-center"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  backdropFilter: 'blur(25px)',
-                  border: '1px solid rgba(255, 255, 255, 0.4)',
-                }}
-              >
-                {module === 'health' && <Activity size={24} />}
-                {module === 'nutrition' && <Leaf size={24} />}
-                {module === 'emotion' && <Heart size={24} />}
-              </div>
-            );
-            
-            setExpandingIcon({
-              module: module as 'health' | 'nutrition' | 'emotion',
-              position: radialMenuClickPosition
-                ? {
-                    x: radialMenuClickPosition.x - 32,
-                    y: radialMenuClickPosition.y - 32,
-                    width: 64,
-                    height: 64,
-                  }
-                : { x: window.innerWidth / 2 - 32, y: window.innerHeight / 2 - 32, width: 64, height: 64 },
-              element: iconElement,
-            });
-            setRadialMenuOpen(false);
-            setRadialMenuClickPosition(null);
-          }}
-          clickPosition={radialMenuClickPosition}
-        />
-
-        {/* Icon Expansion Transition */}
-        {expandingIcon && (
-          <IconExpansionTransition
-            isExpanding={true}
-            iconElement={expandingIcon.element}
-            iconPosition={expandingIcon.position}
-            panelContent={<FullScreenChartPanel module={expandingIcon.module} />}
-            onClose={handlePanelClose}
           />
-        )}
+          <button
+            onClick={handleSendMessage}
+            disabled={!userInput.trim() || generating || !characterState}
+            className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 touch-target disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background:
+                !userInput.trim() || generating || !characterState
+                  ? 'rgba(255, 255, 255, 0.3)'
+                  : '#FFD1DC',
+              color: '#4A4A4A',
+              boxShadow:
+                !userInput.trim() || generating || !characterState
+                  ? 'none'
+                  : '0 2px 8px rgba(255, 209, 220, 0.4)',
+            }}
+            onMouseDown={e => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.opacity = '0.8';
+                e.currentTarget.style.transform = 'scale(0.95)';
+              }
+            }}
+            onMouseUp={e => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }

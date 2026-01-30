@@ -1,23 +1,22 @@
+# Backend Proxy Server Dockerfile
+# Note: Build context is repo root, so paths need backend/ prefix
 FROM node:20-alpine
 
 WORKDIR /app
 
-# IMPORTANT: Build context is REPO ROOT, not backend/ folder
-# All COPY paths must be relative to repository root
+# Copy package files from backend folder
 COPY backend/package*.json ./
 
-# Install dependencies
-RUN npm install --production
+# Install production dependencies only
+RUN npm install --omit=dev
 
-# Copy backend source files from backend/ subdirectory
-COPY backend/src/ ./src/
+# Copy entire backend directory
+COPY backend/ ./
 
-# Expose port
-EXPOSE 3000
+# Set environment
+ENV NODE_ENV=production
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+EXPOSE 8080
 
-# Start the server
-CMD ["node", "src/index.js"]
+# backend/package.json has: "start": "node src/proxy-server.js"
+CMD ["npm", "start"]

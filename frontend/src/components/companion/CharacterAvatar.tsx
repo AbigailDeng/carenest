@@ -33,7 +33,7 @@ export default function CharacterAvatar({
         className={`absolute inset-0 ${sizeClasses[size]} rounded-full bg-gradient-to-br from-pink-200/50 to-rose-200/50 blur-md opacity-60 -z-10`}
       />
       <img
-        src={config.avatarUrl}
+        src="/images/images.jpg"
         alt={config.name.en || config.name.zh || 'Character'}
         className={`${sizeClasses[size]} rounded-full object-cover border-4 border-white/90 shadow-xl ring-2 ring-pink-200/50`}
         onError={e => {

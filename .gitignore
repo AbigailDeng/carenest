@@ -14,6 +14,8 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+frontend/.env
+backend/.env
 
 # Logs
 npm-debug.log*
@@ -59,18 +61,11 @@ coverage/
 .cache
 .parcel-cache
 
-# Next.js
-.next
-out
-
-# Nuxt.js
-.nuxt
-
 # Vite
 .vite
 
-# Rollup
-.rollup.cache
+# Vercel
+.vercel
 
 # Temporary files
 *.tmp
@@ -85,8 +80,5 @@ out
 ehthumbs.db
 Desktop.ini
 
-
-
 # Chrono CLI
 .chrono/
-.cursor/skills/

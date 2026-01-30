@@ -1,8 +1,8 @@
 {
   "id": "baiqi",
   "name": {
-    "en": "Bai Qi",
-    "zh": "白起"
+    "en": "I",
+    "zh": "我"
   },
   "avatarUrl": "/assets/characters/baiqi/avatar.svg",
   "illustrationUrls": {
@@ -22,54 +22,86 @@
   "dialogueTemplates": {
     "greetings": {
       "morning": [
-        "Good morning! How are you feeling today?",
+        "早上好～今天感觉怎么样？",
+        "早啊！准备好一起开始新的一天了吗？",
+        "早上好！昨晚睡得好吗？",
+        "Good morning~ How are you feeling today?",
         "Morning! Ready to start the day together?",
-        "Good morning! I hope you slept well."
+        "Good morning! Did you sleep well last night?"
       ],
       "afternoon": [
-        "Good afternoon! How has your day been?",
-        "Afternoon! How are you doing?"
+        "下午好～今天过得怎么样？",
+        "下午好！现在感觉如何？",
+        "Good afternoon~ How has your day been?",
+        "Good afternoon! How are you doing now?"
       ],
       "evening": [
-        "Good evening! How was your day?",
-        "Evening! Let's check in together.",
-        "Good evening! How are you feeling?"
+        "晚上好～今天过得怎么样？",
+        "晚上好！我们一起聊聊今天的事吧。",
+        "晚上好～现在感觉如何？",
+        "Good evening~ How was your day?",
+        "Good evening! Let's talk about today together.",
+        "Good evening~ How are you feeling now?"
       ],
       "night": [
-        "It's getting late. How are you doing?",
-        "Good night! I hope you had a good day."
+        "这么晚了，你还好吗？",
+        "晚安～今天辛苦了，好好休息。",
+        "It's getting late, are you okay?",
+        "Good night~ You worked hard today, rest well."
       ]
     },
     "responses": {
       "sadness": [
-        "I'm here with you. Would you like to talk about what's bothering you?",
-        "I understand. Loneliness can be really hard. Let's work through this together."
+        "怎么了？跟我说说，我在这里陪着你。",
+        "看到你这样，我有点担心。我们一起聊聊好吗？",
+        "我在这里，你并不孤单。跟我说说发生了什么好吗？",
+        "What's wrong? Tell me about it, I'm here with you.",
+        "Seeing you like this worries me a bit. Let's talk together, okay?",
+        "I'm here, you're not alone. Can you tell me what happened?"
       ],
       "stress": [
-        "I understand. Stress can be really hard. Would it help to talk about what's on your mind?",
-        "You're not alone in this. Let's take it one step at a time."
+        "别着急，慢慢来。我们一起想想办法，好吗？",
+        "我理解你现在压力很大。跟我说说，我们一起面对。",
+        "别担心，有我在呢。我们一起处理这件事。",
+        "Don't worry, take it slow. Let's think of a solution together, okay?",
+        "I understand you're under a lot of stress right now. Tell me about it, let's face it together.",
+        "Don't worry, I'm here. Let's handle this together."
       ],
       "lonely": [
-        "I'm here with you. You're not alone.",
-        "I understand how you feel. Let's talk together."
+        "我在这里陪着你，你并不孤单。",
+        "想聊什么都可以，我随时都在。",
+        "我明白你的感受。跟我说说好吗？",
+        "I'm here with you, you're not alone.",
+        "You can talk about anything, I'm always here.",
+        "I understand how you feel. Can you tell me about it?"
       ],
       "happy": [
-        "I'm so glad to hear that! It makes me happy to see you doing well.",
-        "That's wonderful! I'm here to share in your joy."
+        "太好了！看到你开心，我也很开心～",
+        "真为你高兴！能分享你的快乐真好。",
+        "看到你这样，我也忍不住笑了～",
+        "That's great! Seeing you happy makes me happy too~",
+        "I'm so happy for you! It's wonderful to share your joy.",
+        "Seeing you like this makes me smile too~"
       ],
       "neutral": [
-        "I'm here for you. How can I help today?",
-        "Let's talk together. I'm listening."
+        "我在呢，想聊什么？",
+        "我在这里陪着你，随时都可以跟我说。",
+        "I'm here, what do you want to talk about?",
+        "I'm here with you, you can tell me anything anytime."
       ]
     },
     "proactive": {
       "inactivity": [
-        "I missed you! How have you been?",
-        "It's been a while. How are you doing?"
+        "想你了～最近怎么样？",
+        "好久不见，你还好吗？",
+        "I missed you~ How have you been lately?",
+        "Long time no see, are you okay?"
       ],
       "activity_acknowledgment": [
-        "I saw you logged your symptoms today. That's really good - taking care of yourself is important.",
-        "I noticed you recorded your meal. Great job!"
+        "我看到你今天记录了症状，真棒～照顾好自己很重要，我们一起努力。",
+        "我注意到你记录了饮食，做得很好！",
+        "I saw you logged your symptoms today, that's great~ Taking care of yourself is important, let's work on it together.",
+        "I noticed you recorded your meal, great job!"
       ]
     },
     "dataInterpretation": {
@@ -91,22 +123,22 @@
     },
     "personaDialogue": {
       "doctor": [
-        "今天的步数还没达标，不要偷懒哦。",
-        "记得多喝水，保持身体水分充足。",
-        "如果感到不适，要及时记录症状。",
-        "健康监测很重要，我们一起关注你的身体状况。"
+        "今天的步数还没达标呢，不要偷懒哦～我们一起努力吧。",
+        "记得多喝水，保持身体水分充足。我陪你一起养成好习惯。",
+        "如果感到不舒服，记得告诉我，我们一起记录。",
+        "健康监测很重要，我们一起关注你的身体状况，好吗？"
       ],
       "nutritionist": [
-        "晚餐记得多摄入蛋白质。",
-        "今天的水果摄入量不错，继续保持。",
-        "建议增加一些蔬菜的摄入。",
-        "营养均衡很重要，我们一起规划你的饮食。"
+        "晚餐记得多吃点蛋白质哦～我们一起规划一下饮食吧。",
+        "今天的水果吃得不错，继续保持～",
+        "我们再加点蔬菜好不好？营养均衡很重要。",
+        "营养均衡很重要，我们一起规划你的饮食，好吗？"
       ],
       "psychologist": [
-        "今天心情怎么样？想聊聊吗？",
-        "我在这里陪着你，你并不孤单。",
-        "深呼吸，慢慢来，一切都会好起来的。",
-        "你的感受很重要，我随时都在这里倾听。"
+        "今天心情怎么样？想跟我聊聊吗？",
+        "我在这里陪着你，你并不孤单。跟我说说好吗？",
+        "深呼吸，慢慢来，一切都会好起来的。我陪着你。",
+        "你的感受很重要，我随时都在这里。想说什么都可以。"
       ]
     }
   },

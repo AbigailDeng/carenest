@@ -25,7 +25,7 @@ export default function SymptomAnalysisScreen() {
     }
   }, [id, entries]);
 
-  // Background image URL - Bai Qi illustration (same as health page)
+  // Background image URL - character illustration (same as health page)
   const BACKGROUND_IMAGE_URL = '/images/1cb7398bea6d251b67d50b965c4295130983e2771863c5-oVQb7P_fw658webp.webp';
 
   // Card styling - solid background for better readability (no glassmorphism)
@@ -112,7 +112,7 @@ export default function SymptomAnalysisScreen() {
   if (loading || recordsLoading) {
     return (
       <div className="relative min-h-screen" style={{ backgroundColor: 'transparent', position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
-        {/* ImageBackground - 最底层唯一的白起立绘 */}
+        {/* ImageBackground - 最底层唯一的角色立绘 */}
         <ImageBackground imageUrl={BACKGROUND_IMAGE_URL} />
         <div className="relative flex items-center justify-center z-10" style={{ minHeight: '100vh' }}>
           <div className="text-center">
@@ -126,7 +126,7 @@ export default function SymptomAnalysisScreen() {
   if (!entry) {
     return (
       <div className="relative min-h-screen" style={{ backgroundColor: 'transparent', position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
-        {/* ImageBackground - 最底层唯一的白起立绘 */}
+        {/* ImageBackground - 最底层唯一的角色立绘 */}
         <ImageBackground imageUrl={BACKGROUND_IMAGE_URL} />
         <div className="relative min-h-screen py-6 z-10 w-full" style={{ backgroundColor: 'transparent', paddingLeft: '20px', paddingRight: '20px' }}>
           <div
@@ -162,7 +162,7 @@ export default function SymptomAnalysisScreen() {
 
   return (
     <div className="relative min-h-screen" style={{ backgroundColor: 'transparent', position: 'relative', width: '100%', height: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
-      {/* ImageBackground - 最底层唯一的白起立绘 */}
+      {/* ImageBackground - 最底层唯一的角色立绘 */}
       <ImageBackground imageUrl={BACKGROUND_IMAGE_URL} />
 
       {/* Content Layer - all containers must be transparent, scrollable */}

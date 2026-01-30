@@ -178,6 +178,7 @@ export interface MessageContext {
   energy: "low" | "medium" | "high";
   timeOfDay: "morning" | "afternoon" | "evening" | "night";
   relationshipStage: RelationshipStage;
+  emotionalState?: "sad" | "stressed" | "lonely" | "happy" | "neutral"; // FR-045: Track character's emotional state during message
 }
 
 export interface ConversationMessage extends BaseEntity {
@@ -200,7 +201,7 @@ export interface ConversationMessage extends BaseEntity {
 
 export interface CharacterConfig {
   id: string; // Character identifier (e.g., "baiqi")
-  name: Record<string, string>; // i18n: { "en": "Bai Qi", "zh": "白起" }
+  name: Record<string, string>; // i18n: { "en": "I", "zh": "我" }
   avatarUrl: string; // Path to avatar image (e.g., "/assets/characters/baiqi/avatar.png")
   illustrationUrls: {
     default: string;
