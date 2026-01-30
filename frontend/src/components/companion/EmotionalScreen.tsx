@@ -277,7 +277,7 @@ export default function EmotionalScreen() {
                     : getBubbleStyle(messageMood)
                 }
               >
-                <p className="text-base leading-relaxed" style={{ color: '#FFFFFF' }}>
+                <p className="text-base leading-relaxed" style={{ color: '#FFFFFF', fontWeight: 500 }}>
                   {message.content}
                 </p>
                 <p

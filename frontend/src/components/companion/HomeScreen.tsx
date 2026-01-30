@@ -303,7 +303,7 @@ export default function HomeScreen() {
             pointerEvents: 'auto',
           }}
         >
-          <p className="text-[15px] leading-relaxed" style={{ color: '#4A4A4A' }}>
+          <p className="text-[15px] leading-relaxed" style={{ color: '#4A4A4A', fontWeight: 500 }}>
             {latestCharacterMessage?.content ||
               (characterLoading ? '' : t('companion.noMessages') || '...')}
           </p>
